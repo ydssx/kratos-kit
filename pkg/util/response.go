@@ -15,14 +15,14 @@ type Response struct {
 	Code   int         `json:"code"`
 	Msg    string      `json:"msg"`
 	Data   interface{} `json:"data"`
-	Reason string      `json:"reason"`
+	Reason string      `json:"reason,omitempty"`
 }
 
 const (
 	ERROR      = -1
 	SUCCESS    = 0
-	ErrorMsg   = "fail"
-	SuccessMsg = "success"
+	ErrorMsg   = "ERROR"
+	SuccessMsg = "SUCCESS"
 )
 
 func result(c *gin.Context, httpCode int, code int, data interface{}, msg, reason string) {

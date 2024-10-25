@@ -106,14 +106,11 @@ func CustomizeResponseEncoder(w http.ResponseWriter, r *http.Request, v interfac
 	var err error
 	if r, ok := v.(proto.Message); ok {
 		data, err = protojson.MarshalOptions{UseProtoNames: true, EmitUnpopulated: true}.Marshal(r)
-		if err != nil {
-			return err
-		}
 	} else {
 		data, err = json.Marshal(v)
-		if err != nil {
-			return err
-		}
+	}
+	if err != nil {
+		return err
 	}
 
 	result := util.Response{

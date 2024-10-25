@@ -3,7 +3,6 @@ package concurrent
 import (
 	"context"
 	"errors"
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -17,35 +16,133 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestGroup_Run(t *testing.T) {
-	// Test case 1: Limiting concurrent execution to 2
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
-	defer cancel()
-	g := NewGroup(ctx, WithSemaphore(3), WithFastFail(true))
-	err1 := errors.New("Error 1")
-	err2 := errors.New("Error 2")
-	err3 := errors.New("Error 3")
-	log.Print("start")
-	gErr := g.Run(
-		func() error {
-			time.Sleep(3 * time.Second)
-			log.Print(err1)
-			return err1
-		},
-		func() error {
-			time.Sleep(3 * time.Second)
-			log.Print(err2)
-			return err2
-		},
-		func() error {
-			time.Sleep(5 * time.Second)
-			log.Print(err3)
-			return err3
-		},
-	)
-	log.Print("result: ", gErr)
-	if gErr == nil {
-		t.Errorf("Expected gErr to be %v, got %v", err1, gErr)
-	}
-	time.Sleep(3 * time.Second)
+func TestGroup(t *testing.T) {
+	t.Run("Basic Execution", func(t *testing.T) {
+		g := NewGroup(context.Background())
+		result := 0
+
+		err := g.Run(
+			func() error {
+				result += 1
+				return nil
+			},
+			func() error {
+				result += 2
+				return nil
+			},
+		)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if result != 3 {
+			t.Errorf("Expected result 3, got %d", result)
+		}
+	})
+
+	t.Run("Error Handling", func(t *testing.T) {
+		g := NewGroup(context.Background())
+		expectedErr := errors.New("test error")
+
+		err := g.Run(
+			func() error {
+				return expectedErr
+			},
+			func() error {
+				return nil
+			},
+		)
+
+		if err != expectedErr {
+			t.Errorf("Expected error %v, got %v", expectedErr, err)
+		}
+	})
+
+	t.Run("Fast Fail", func(t *testing.T) {
+		g := NewGroup(context.Background(), WithFastFail(true))
+		expectedErr := errors.New("fast fail error")
+
+		err := g.Run(
+			func() error {
+				time.Sleep(100 * time.Millisecond)
+				return nil
+			},
+			func() error {
+				return expectedErr
+			},
+		)
+
+		if err != expectedErr {
+			t.Errorf("Expected error %v, got %v", expectedErr, err)
+		}
+	})
+
+	t.Run("Timeout", func(t *testing.T) {
+		g := NewGroup(context.Background(), WithTimeout(50*time.Millisecond))
+
+		err := g.Run(
+			func() error {
+				time.Sleep(100 * time.Millisecond)
+				return nil
+			},
+		)
+
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("Expected deadline exceeded error, got %v", err)
+		}
+	})
+
+	t.Run("Panic Recovery", func(t *testing.T) {
+		g := NewGroup(context.Background(), WithRecover(true))
+
+		err := g.Run(
+			func() error {
+				panic("test panic")
+			},
+		)
+
+		if err == nil {
+			t.Error("Expected error from panic, got nil")
+		}
+		if !errors.Is(err, context.Canceled) {
+			t.Errorf("Expected context canceled error, got %v", err)
+		}
+	})
+
+	t.Run("Semaphore Limit", func(t *testing.T) {
+		g := NewGroup(context.Background(), WithSemaphore(2))
+		running := make(chan struct{}, 3)
+		done := make(chan struct{})
+
+		err := g.Run(
+			func() error {
+				running <- struct{}{}
+				<-done
+				return nil
+			},
+			func() error {
+				running <- struct{}{}
+				<-done
+				return nil
+			},
+			func() error {
+				running <- struct{}{}
+				<-done
+				return nil
+			},
+		)
+
+		// 等待一小段时间让goroutines启动
+		time.Sleep(50 * time.Millisecond)
+
+		// 检查同时运行的goroutine数量
+		if len(running) > 2 {
+			t.Error("More than 2 goroutines running simultaneously")
+		}
+
+		// 清理
+		close(done)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+	})
 }

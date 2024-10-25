@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	common2 "github.com/ydssx/kratos-kit/common"
+	"github.com/ydssx/kratos-kit/common"
 	"github.com/ydssx/kratos-kit/common/conf"
 	"github.com/ydssx/kratos-kit/internal/biz"
 	"github.com/ydssx/kratos-kit/internal/job"
@@ -21,7 +21,7 @@ type JobServer struct {
 }
 
 func NewJobServer(c *conf.Bootstrap, serviceSet *biz.UsecaseSet) *JobServer {
-	opt := common2.InitRedisOpt(c)
+	opt := common.InitRedisOpt(c)
 
 	server := asynq.NewServer(opt, asynq.Config{
 		Concurrency:  int(c.Asynq.Concurrency),

@@ -10,9 +10,20 @@ import (
 )
 
 // ProviderSet is server providers.
-var ProviderSet = wire.NewSet(common.NewRateLimiter, NewHTTPServer, NewJobServer, NewGinServer, NewGRPCServer, NewServer)
+var ProviderSet = wire.NewSet(
+	common.NewRateLimiter,
+	NewHTTPServer,
+	NewJobServer,
+	NewGinServer,
+	NewGRPCServer,
+	NewServer,
+)
 
-func NewServer(httpServer *http.Server, jobServer *JobServer, grpcServer *grpc.Server) []transport.Server {
+func NewServer(
+	httpServer *http.Server,
+	jobServer *JobServer,
+	grpcServer *grpc.Server,
+) []transport.Server {
 	return []transport.Server{
 		jobServer,
 		httpServer,

@@ -2,16 +2,20 @@ package concurrent
 
 import (
 	"context"
+	"fmt"
+	"runtime/debug" // 添加 debug 包导入
+	"time"
 
 	"golang.org/x/sync/errgroup"
 )
 
 type Group struct {
-	limit    int
-	eg       *errgroup.Group
-	ctx      context.Context
-	errChan  chan error
-	fastFail bool
+	limit     int
+	eg        *errgroup.Group
+	ctx       context.Context
+	fastFail  bool
+	timeout   time.Duration
+	recover   bool
 }
 
 type Opt func(*Group)
@@ -31,16 +35,41 @@ func WithFastFail(fastFail bool) Opt {
 	return func(g *Group) { g.fastFail = fastFail }
 }
 
-func NewGroup(ctx context.Context, opts ...Opt) *Group {
-	eg, ctx := errgroup.WithContext(ctx)
-	g := &Group{eg: eg, errChan: make(chan error, 1), ctx: ctx}
+func WithTimeout(timeout time.Duration) Opt {
+	return func(g *Group) { g.timeout = timeout }
+}
 
+func WithRecover(recover bool) Opt {
+	return func(g *Group) { g.recover = recover }
+}
+
+func NewGroup(ctx context.Context, opts ...Opt) *Group {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	g := &Group{ctx: ctx}
 	for _, opt := range opts {
 		opt(g)
 	}
+
+	if g.timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, g.timeout)
+		go func() {
+			<-ctx.Done()
+			cancel()
+		}()
+	}
+
+	eg, ctx := errgroup.WithContext(ctx)
+	g.eg = eg
+	g.ctx = ctx
+
 	if g.limit > 0 {
 		eg.SetLimit(g.limit)
 	}
+
 	return g
 }
 
@@ -53,26 +82,39 @@ func NewGroup(ctx context.Context, opts ...Opt) *Group {
 //
 // Returns:
 //   - error: An error that occurred during the execution of the goroutines, if any. If no error occurred, the function returns nil.
-func (g *Group) Run(fs ...func() error) (err error) {
-	for _, f := range fs {
-		g.eg.Go(f)
+func (g *Group) Run(fs ...func() error) error {
+	if len(fs) == 0 {
+		return nil
 	}
+
+	for _, f := range fs {
+		f := f // 捕获变量
+		g.eg.Go(func() error {
+			if g.recover {
+				defer func() {
+					if r := recover(); r != nil {
+						err := fmt.Errorf("panic recovered: %v\nstack:\n%s", r, debug.Stack())
+						g.eg.Go(func() error { return err })
+					}
+				}()
+			}
+			return f()
+		})
+	}
+
 	if !g.fastFail {
 		return g.eg.Wait()
 	}
 
+	errCh := make(chan error, 1)
 	go func() {
-		err = g.eg.Wait()
-		g.errChan <- err
-		close(g.errChan)
+		errCh <- g.eg.Wait()
 	}()
 
 	select {
 	case <-g.ctx.Done():
-		if err == nil {
-			err = g.ctx.Err()
-		}
-	case err = <-g.errChan:
+		return g.ctx.Err()
+	case err := <-errCh:
+		return err
 	}
-	return
 }
