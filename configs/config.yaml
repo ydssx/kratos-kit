@@ -1,0 +1,57 @@
+name: api
+env: dev
+server:
+  http:
+    addr: 0.0.0.0:9000
+    timeout: 30s
+  grpc:
+    addr: 0.0.0.0:9001
+    timeout: 30s
+
+data:
+  database:
+    driver: mysql
+    source: 
+      - root:123456@tcp(127.0.0.1:3306)/?parseTime=true&loc=Local
+  redis:
+    addr: 127.0.0.1:6379
+    username:
+    password: 
+    read_timeout: 2s
+    write_timeout: 2s
+    dial_timeout: 5s
+    db : 2
+  geoip:
+    path: ./data/geoip/GeoLite2-City.mmdb
+
+log:
+  level: debug
+  path: ./logs
+  enable_console: true # 是否打印到终端
+  max_size: 100 # 单个文件最大大小，单位MB
+  max_backups: 10 # 最大备份文件数
+  max_age: 30 # 最大保存天数
+  compress: true # 是否压缩
+
+asynq:
+  concurrency: 10
+  max_retry: 3
+  strict_priority: true
+
+
+webhook:
+  url: 
+
+# Google Cloud Storage
+gcs:
+  bucket_name: 
+  project_id: 
+  credentials_file: 
+
+aes:
+  key: 
+
+google:
+  client_id: 
+  client_secret: 
+  redirect_url: 

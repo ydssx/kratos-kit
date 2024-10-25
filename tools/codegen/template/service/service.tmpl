@@ -1,0 +1,40 @@
+package service
+
+import (
+	"context"
+
+	{{.serviceInfo.PkgName}} "{{.serviceInfo.PkgPath}}"
+	"{{.module}}/internal/biz"
+	{{range .serviceInfo.Pkgs}}"{{.}}"
+	{{end }}
+)
+
+var _ = context.Background
+
+type {{.serviceInfo.Name}} struct {
+	uc *biz.{{.appName | Title}}UseCase
+
+	{{.serviceInfo.PkgName}}.Unimplemented{{.serviceInfo.Name}}Server
+}
+
+func New{{.serviceInfo.Name | Title}}(uc *biz.{{.appName | Title}}UseCase) *{{.serviceInfo.Name}} {
+	return &{{.serviceInfo.Name}}{uc: uc}
+}
+{{$serviceName := .serviceInfo.Name}}
+{{$pkgName := .serviceInfo.PkgName}}
+{{range .serviceInfo.RpcMeths}}
+{{if .Comment}}//{{.Comment}}{{end -}}
+{{if or (and .StreamsReturns .StreamsRequest) .StreamsRequest}}
+func (s *{{$serviceName}}) {{.MethName}}(stream {{$pkgName}}.{{$serviceName}}_{{.MethName}}Server) (err error) {
+	return s.uc.{{.MethName}}(stream)
+}
+{{else if .StreamsReturns }}
+func (s *{{$serviceName}}) {{.MethName}}(req *{{.Param}}, stream {{$pkgName}}.{{$serviceName}}_{{.MethName}}Server) (err error) {
+	return s.uc.{{.MethName}}(req, stream)
+}
+{{else}}
+func (s *{{$serviceName}}) {{.MethName}}(ctx context.Context,req *{{.Param}}) (res *{{.Return}}, err error) {
+	return s.uc.{{.MethName}}(ctx, req)
+}
+{{end -}}
+{{end -}}

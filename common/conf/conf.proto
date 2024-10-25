@@ -1,0 +1,135 @@
+syntax = "proto3";
+package common.conf;
+
+import "google/protobuf/duration.proto";
+import "validate/validate.proto";
+
+option go_package = "github.com/ydssx/kratos-kit/common/conf;conf";
+
+message Bootstrap {
+  string name = 1;
+  string env = 2;
+  Server server = 3 [(validate.rules).message.required = true];
+  Data data = 4 [(validate.rules).message.required = true];
+  Logger log = 5 [(validate.rules).message.required = true];
+  Asynq asynq = 6 [(validate.rules).message.required = true];
+  GoogleCloudStorage gcs = 7 [(validate.rules).message.required = true];
+  Payment payment = 8 [(validate.rules).message.required = true];
+  Facedetect facedetect = 9 [(validate.rules).message.required = true];
+  Webhook webhook = 10 [(validate.rules).message.required = true];
+  Aes aes = 11 [(validate.rules).message.required = true];
+  string project_id = 12;
+  Google google = 13 [(validate.rules).message.required = true];
+  Email email = 14 [(validate.rules).message.required = true];
+}
+
+message Server {
+  message HTTP {
+    string network = 1;
+    string addr = 2;
+    google.protobuf.Duration timeout = 3;
+  }
+  message GRPC {
+    string network = 1;
+    string addr = 2;
+    google.protobuf.Duration timeout = 3;
+  }
+  HTTP http = 1;
+  GRPC grpc = 2;
+}
+
+message Data {
+  message Database {
+    string driver = 1;
+    repeated string source = 2;
+  }
+  Database database = 1;
+  Redis redis = 2;
+  Mongo mongo = 3;
+  Geoip geoip = 4;
+  Redis job_redis = 5;
+  Database event_database = 6;
+}
+
+message Redis {
+  string addr = 1;
+  string username = 2;
+  string password = 3;
+  google.protobuf.Duration read_timeout = 4;
+  google.protobuf.Duration write_timeout = 5;
+  google.protobuf.Duration dial_timeout = 6;
+  int32 db = 7;
+}
+
+message Mongo {
+  string addr = 1;
+  string username = 2;
+  string password = 3;
+  string database = 4;
+  string collection = 5;
+  google.protobuf.Duration read_timeout = 6;
+  google.protobuf.Duration write_timeout = 7;
+  google.protobuf.Duration dial_timeout = 8;
+}
+
+message Logger {
+  string level = 1;
+  string path = 2;
+  bool enable_console = 3;
+  int32 max_size = 4;
+  int32 max_backups = 5;
+  int32 max_age = 6;
+  bool compress = 7;
+}
+
+message Asynq {
+  int32 concurrency = 1;
+  int32 max_retry = 2;
+  bool strict_priority = 3;
+}
+
+message GoogleCloudStorage {
+  string project_id = 1;
+  string bucket_name = 2;
+  string credentials_file = 3;
+}
+
+message Geoip {
+  string path = 1;
+}
+
+message Payment {
+  string notify_url = 1;
+  string return_url = 2;
+  string salt = 3;
+  string secret_key = 4;
+  string server_url = 5;
+  string website = 6;
+}
+
+message Facedetect {
+  string url = 1;
+}
+
+message Webhook {
+  string url = 1;
+  string order_notify_url = 2;
+}
+
+message Aes {
+  string key = 1;
+}
+
+message Google {
+  string client_id = 1;
+  string client_secret = 2;
+  string redirect_url = 3;
+}
+
+message Email {
+  string host = 1;
+  int32 port = 2;
+  string username = 3;
+  string password = 4;
+  string from = 5;
+}

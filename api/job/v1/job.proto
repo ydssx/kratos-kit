@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package job.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ydssx/kratos-kit/api/job/v1;jobv1";
+
+message EnqueueRequest {
+  JobType job_type = 1; // 任务类型
+  bytes payload = 2; // 任务参数
+  int64 retry_time = 3; // 重试次数
+  google.protobuf.Timestamp process_at = 4; // 任务执行时间
+  google.protobuf.Duration process_in = 5;
+  google.protobuf.Timestamp deadline = 6;
+  // 任务完成后保留时间
+  google.protobuf.Duration retention = 7;
+}
+
+message EnqueueResponse {
+  string task_id = 1;
+}
+
+message QueryTasksRequest {
+  repeated string task_ids = 1;
+}
+
+message QueryTasksResponse {
+  message TaskInfo {
+    string task_id = 1;
+    bytes result = 2;
+    string status = 3;
+  }
+  repeated TaskInfo tasks = 1;
+}
+
+// ========================================
+// ========================================
+
+// 任务类型定义
+enum JobType {
+  TEST_JOB = 0;
+  TEST_CRON_JOB = 1;
+  GOOGLE_INSTANCE_ADJUST = 2;
+  // 订阅自动续费
+  SUBSCRIPTION_RENEWAL = 3;
+  // 任务超时积分退还
+  TASK_TIMEOUT_REFUND = 4;
+  // 更新视频排序
+  UPDATE_VIDEO_SORT = 5;
+  // 清理用户上传文件
+  CLEAN_USER_UPLOAD_FILES = 6;
+  // 清理旧日志文件
+  CLEAN_OLD_LOG_FILES = 7;
+  // 清理用户过期积分
+  CLEAN_USER_EXPIRED_POINTS = 8;
+  // 重置每日字符数
+  RESET_DAILY_CHARACTERS = 9;
+}
+
+// 任务超时积分退还
+message PayLoadTaskTimeout {
+  int32 task_id = 1;
+}
+
+message PayLoadTest {
+  string msg = 1;
+}
+
+message PayLoadOrderPaymentCompleted {
+  int64 order_id = 1;
+}
+
+message PayLoadOrderTimeout {
+  string order_num = 1;
+}
+
+message QueuingTimeRequest {
+  int64 task_id = 1;
+}
+
+message QueuingTimeResponse {
+  int64 task_id = 1;
+  int64 seconds = 2;
+}
+
+enum AdminJob {
+  // 生成每日报表
+  GENERATE_DAILY_REPORT = 0;
+  // 生成当日报表
+  GENERATE_TODAY_REPORT = 1;
+}

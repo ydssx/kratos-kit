@@ -1,0 +1,193 @@
+syntax = "proto3";
+
+package userv1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "validate/validate.proto";
+
+option go_package = "github.com/ydssx/kratos-kit/api/user/v1;userv1";
+
+// 用户服务
+service UserService {
+  // 用户登录
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/api/users/login"
+      body: "*"
+    };
+  }
+  // 用户注册
+  rpc Register(RegisterRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/api/users/register"
+      body: "*"
+    };
+  }
+  // 用户创建（进行ip限制）
+  rpc Create(CreateRequest) returns (LoginResponse) {
+    // option (google.api.http) = {
+    //   post: "/api/users/create"
+    //   body: "*"
+    // };
+  }
+
+  // 检测账号是否存在
+  rpc IsAccountExist(IsAccountExistRequest) returns (IsAccountExistResponse) {
+    option (google.api.http) = {get: "/api/users/account_exist"};
+  }
+
+  // 获取用户信息
+  rpc GetUser(google.protobuf.Empty) returns (GetUserResponse) {
+    option (google.api.http) = {get: "/api/users/get_user"};
+  }
+
+  // Google登录
+  rpc GoogleLogin(google.protobuf.Empty) returns (GoogleLoginResponse) {
+    option (google.api.http) = {get: "/api/users/google-login"};
+  }
+  // 用户登出
+  rpc Logout(google.protobuf.Empty) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/api/users/logout"
+      body: "*"
+    };
+  }
+  // 发送验证码
+  rpc SendVerificationCode(SendVerificationCodeRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/users/send_verification_code"
+      body: "*"
+    };
+  }
+  // 更新用户信息
+  rpc UpdateUser(UpdateUserRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/users/update_user"
+      body: "*"
+    };
+  }
+}
+
+message RegisterRequest {
+  string email = 1 [(validate.rules).string.email = true]; // 邮箱
+  string password = 2 [
+    (validate.rules).string.min_len = 6,
+    (validate.rules).string.max_len = 20
+  ]; // 密码
+  string code = 3; // 验证码
+}
+
+message GetUserResponse {
+  int32 id = 1;
+  string username = 2;
+  string email = 3;
+  string avatar_path = 4;
+  int32 subscription_points = 5;
+  int32 red_point = 6;
+  bool has_subscribe = 7; // 是否订阅过套餐,true表示订阅过，false表示没有订阅过
+  int32 characters_remaining_today = 8; // 今日剩余字符数
+  int32 daily_characters_limit = 9; // 每日可用字符数
+}
+
+message User {
+  int64 id = 1;
+  string username = 2;
+  string email = 3;
+  string avatar_path = 4;
+  int64 subscription_points = 5;
+}
+
+message RegistrationRequest {
+  // 用户名
+  string username = 1;
+  // 密码
+  string password = 2 [
+    (validate.rules).string.min_len = 6,
+    (validate.rules).string.max_len = 20
+  ];
+  // 邮箱
+  string email = 3 [(validate.rules).string.email = true];
+  // 手机号
+  string phone = 4;
+  // 短信验证码
+  string sms_code = 5;
+  // 注册类型
+  enum RegisterType {
+    SMS = 0; // 通过短信验证码注册
+    PASSWORD = 1; // 通过用户名密码注册
+  }
+  RegisterType register_type = 6;
+}
+
+message LoginRequest {
+  string email = 1 [(validate.rules).string.email = true]; // 邮箱
+  string password = 2; // 密码(用于密码登录)
+  string code = 3; // 验证码(用于邮箱验证码登录)
+}
+
+message LoginResponse {
+  string uuid = 1; // 用户uuid
+}
+
+message CreateRequest {
+  string x_u_key = 1; // 加密算法key
+  string token = 2; // 前端根据动态js算出的加密结果
+  string source_domain = 3; // 注册来源域名
+}
+
+message LogoutRequest {
+  int64 user_id = 1;
+}
+
+message UpdateProfileRequest {
+  string email = 1 [(validate.rules).string.email = true];
+  string phone = 2 [
+    (validate.rules).string.len = 11,
+    (validate.rules).string.pattern = "^1[3-9]\\d{9}$"
+  ];
+  string username = 3 [
+    (validate.rules).string.min_len = 3,
+    (validate.rules).string.max_len = 20
+  ];
+}
+
+message GetUserPermissionRequest {
+  int64 user_id = 1;
+}
+
+message UserPermissionListResponse {
+  repeated UserPermission permission = 1;
+}
+
+message UserPermission {
+  string resource = 1; // 资源 例如: /api/users
+  repeated string actions = 2; // 权限 例如: GET, POST, PUT, DELETE
+  repeated string roles = 3; // 角色 例如: admin, user
+}
+
+message IsAccountExistRequest {
+  string email = 1; // 用户邮箱账号
+}
+
+message IsAccountExistResponse {
+  bool is_exist = 1; // true=账号已存在；false=账号不存在
+}
+
+message GoogleLoginResponse {
+  string url = 1;
+}
+
+message GoogleCallbackRequest {
+  string code = 1;
+  string state = 2;
+}
+
+message SendVerificationCodeRequest {
+  string email = 1 [(validate.rules).string.email = true]; // 邮箱
+}
+
+message UpdateUserRequest {
+  string username = 2;
+  string avatar_path = 3;
+}

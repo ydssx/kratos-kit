@@ -1,0 +1,96 @@
+package models
+
+import (
+	"context"
+
+	"gorm.io/gorm"
+)
+
+// table {{.TableName}} {{.TableComment}}
+type {{.Name | Title}} struct {
+	{{.model}}
+	{{range .Fields}}{{.Name | Title | CamelCase}} {{.Type}} {{.Tag}} {{if .Comment}}// {{.Comment}}{{end}}
+	{{end -}}
+}
+
+func (m {{.Name | Title}}) TableName() string {
+	return "{{.TableName}}"
+}
+
+type {{.Name | Lower}}Model DB
+
+func New{{.Name | Title}}Model(tx *gorm.DB) *{{.Name | Lower}}Model {
+	db := tx.Model(&{{.Name | Title}}{})
+	return &{{.Name | Lower}}Model{db: db}
+}
+
+func (m *{{.Name | Lower}}Model) Clone() *{{.Name | Lower}}Model {
+	m.db = cloneDB(m.db)
+	return m
+}
+
+func (m *{{.Name | Lower}}Model) SetIds(ids ...int64) *{{.Name | Lower}}Model {
+	m.db = m.db.Where("id IN (?)", ids)
+	return m
+}
+
+func (m *{{.Name | Lower}}Model) Order(expr string) *{{.Name | Lower}}Model {
+	m.db = m.db.Order(expr)
+	return m
+}
+
+func (m *{{.Name | Lower}}Model) Select(fields ...string) *{{.Name | Lower}}Model {
+	m.db = m.db.Select(fields)
+	return m
+}
+
+func (m *{{.Name | Lower}}Model) WithContext(ctx context.Context) *{{.Name | Lower}}Model {
+	m.db = m.db.WithContext(ctx)
+	return m
+}
+
+func (m *{{.Name | Lower}}Model) Create({{.Name | Lower}} {{.Name | Title | Title}}) error {
+	return m.db.Create(&{{.Name | Lower}}).Error
+}
+
+func (m *{{.Name | Lower}}Model) Updates(values interface{}) error {
+	return m.db.Updates(values).Error
+}
+
+func (m *{{.Name | Lower}}Model) FirstOne() (data *{{.Name | Title}}, err error) {
+	err = m.db.Take(&data).Error
+	return
+}
+
+func (m *{{.Name | Lower}}Model) LastOne() (data *{{.Name | Title}}, err error) {
+	err = m.db.Last(&data).Error
+	return
+}
+
+func (m *{{.Name | Lower}}Model) DeleteByPrimKey(key interface{}) error {
+	return m.db.Where("{{.PrimaryKey}} IN (?)", key).Delete(&{{.Name | Title}}{}).Error
+}
+
+func (m *{{.Name | Lower}}Model) List() (data []{{.Name | Title}}, err error) {
+	err = m.db.Find(&data).Error
+	return
+}
+
+func (m *{{.Name | Lower}}Model) PageList(pageNum, pageSize int) (data []{{.Name | Title}}, total int64, err error) {
+	query := m.db
+	err = query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	err = query.Limit(pageSize).Offset((pageNum - 1) * pageSize).Find(&data).Error
+	return
+}
+
+func (m *{{.Name | Lower}}Model) Delete() error {
+	return m.db.Delete(&{{.Name | Title}}{}).Error
+}
+
+func (m *{{.Name | Lower}}Model) Where(query interface{}, args ...interface{}) *{{.Name | Lower}}Model {
+	m.db = m.db.Where(query, args...)
+	return m
+}

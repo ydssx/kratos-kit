@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package admin.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ydssx/kratos-kit/api/admin/v1;adminv1";
+
+service AdminService {}
