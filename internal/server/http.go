@@ -5,15 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	stdhttp "net/http"
-
-	userv1 "github.com/ydssx/kratos-kit/api/user/v1"
-	"github.com/ydssx/kratos-kit/common"
-	"github.com/ydssx/kratos-kit/common/conf"
-	"github.com/ydssx/kratos-kit/internal/middleware"
-	"github.com/ydssx/kratos-kit/internal/service"
-	"github.com/ydssx/kratos-kit/pkg/errors"
-	"github.com/ydssx/kratos-kit/pkg/limit"
-	"github.com/ydssx/kratos-kit/pkg/util"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-kratos/kratos/v2/encoding"
@@ -24,24 +16,34 @@ import (
 	"github.com/hibiken/asynqmon"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	userv1 "github.com/ydssx/kratos-kit/api/user/v1"
+	"github.com/ydssx/kratos-kit/common"
+	"github.com/ydssx/kratos-kit/common/conf"
+	"github.com/ydssx/kratos-kit/internal/middleware"
+	"github.com/ydssx/kratos-kit/internal/service"
+	"github.com/ydssx/kratos-kit/pkg/errors"
+	"github.com/ydssx/kratos-kit/pkg/limit"
+	"github.com/ydssx/kratos-kit/pkg/util"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
-// newWhiteListMatcher 不需要认证的白名单
-func newWhiteListMatcher() selector.MatchFunc {
-	whiteList := map[string]struct{}{
-		userv1.OperationUserServiceSendVerificationCode: {},
-	}
+const (
+	jsonContentType = "application/json; charset=utf-8"
+	serverError     = "Server Exception"
+	timeoutError    = "Request timed out"
+	unauthorized    = "Unauthorized"
+)
 
-	return func(ctx context.Context, operation string) bool {
-		if _, ok := whiteList[operation]; ok {
-			return false
-		}
-		return true
-	}
+// HTTPServerConfig HTTP服务器配置
+type HTTPServerConfig struct {
+	Addr     string
+	Timeout  time.Duration
+	Username string
+	Password string
 }
 
+// NewHTTPServer 创建HTTP服务器
 func NewHTTPServer(
 	c *conf.Bootstrap,
 	ws *common.WsService,
@@ -50,6 +52,17 @@ func NewHTTPServer(
 	ginServer *gin.Engine,
 	userSvc *service.UserService,
 ) *http.Server {
+	cfg := getHTTPConfig(c)
+	srv := http.NewServer(buildServerOptions(cfg, geoip, limiter)...)
+
+	registerRoutes(srv, ws, userSvc, cfg, c)
+	logRoutes(srv)
+
+	return srv
+}
+
+// buildServerOptions 构建服务器选项
+func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter *limit.RedisLimiter) []http.ServerOption {
 	opts := []http.ServerOption{
 		http.Middleware(
 			recovery.Recovery(),
@@ -57,60 +70,61 @@ func NewHTTPServer(
 			middleware.Validator(),
 			middleware.TraceServer(),
 			selector.Server(middleware.AuthServer(geoip)).Match(newWhiteListMatcher()).Build(),
-			// kratos.MetricServer(),
 			middleware.LanguageMiddleware(),
-			// middleware.Timeout(c.Server.Http.Timeout.AsDuration()),
 		),
 		http.ResponseEncoder(CustomizeResponseEncoder),
 		http.ErrorEncoder(CustomizeErrorEncoder),
 	}
-	server := c.Server
-	if server.Http.Addr != "" {
-		opts = append(opts, http.Address(server.Http.Addr))
+
+	if cfg.Addr != "" {
+		opts = append(opts, http.Address(cfg.Addr))
 	}
-	if server.Http.Timeout != nil {
-		opts = append(opts, http.Timeout(server.Http.Timeout.AsDuration()))
+	if cfg.Timeout > 0 {
+		opts = append(opts, http.Timeout(cfg.Timeout))
 	}
-	srv := http.NewServer(opts...)
 
-	srv.HandleFunc("/health", func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-		w.Write([]byte("ok"))
-	})
-
-	srv.Handle("/metrics", promhttp.Handler())
-
-	h := asynqmon.New(
-		asynqmon.Options{
-			RootPath:     "/monitor",
-			RedisConnOpt: common.InitRedisOpt(c),
-		})
-	srv.HandlePrefix(h.RootPath(), BasicAuth("admin", "admin", h))
-
-	srv.Handle("/ws", stdhttp.HandlerFunc(ws.HandleWebSocket))
-
-	userv1.RegisterUserServiceHTTPServer(srv, userSvc)
-
-	// 添加Gin路由, 注意这里的路由不要和上面的路由冲突
-	srv.HandlePrefix("/", ginServer)
-
-	srv.WalkRoute(func(info http.RouteInfo) error {
-		fmt.Printf("Route: [%s] %s\n", info.Method, info.Path)
-		return nil
-	})
-
-	return srv
+	return opts
 }
 
+// registerRoutes 注册路由
+func registerRoutes(srv *http.Server, ws *common.WsService, userSvc *service.UserService, cfg HTTPServerConfig, c *conf.Bootstrap) {
+	// 基础路由
+	registerBasicRoutes(srv, cfg.Username, cfg.Password, c)
+
+	// WebSocket
+	srv.Handle("/ws", stdhttp.HandlerFunc(ws.HandleWebSocket))
+
+	// 用户服务
+	userv1.RegisterUserServiceHTTPServer(srv, userSvc)
+}
+
+// registerBasicRoutes 注册基础路由
+func registerBasicRoutes(srv *http.Server, username, password string, c *conf.Bootstrap) {
+	// 健康检查
+	srv.HandleFunc("/health", healthCheck)
+
+	// Prometheus 指标
+	srv.Handle("/metrics", promhttp.Handler())
+
+	// Asynq监控
+	h := asynqmon.New(asynqmon.Options{
+		RootPath:     "/monitor",
+		RedisConnOpt: common.InitRedisOpt(c),
+	})
+	srv.HandlePrefix(h.RootPath(), BasicAuth(username, password, h))
+}
+
+// healthCheck 健康检查处理器
+func healthCheck(w stdhttp.ResponseWriter, _ *stdhttp.Request) {
+	w.WriteHeader(stdhttp.StatusOK)
+	w.Write([]byte("ok"))
+}
+
+// CustomizeResponseEncoder 自定义响应编码器
 func CustomizeResponseEncoder(w http.ResponseWriter, r *http.Request, v interface{}) error {
-	var data []byte
-	var err error
-	if r, ok := v.(proto.Message); ok {
-		data, err = protojson.MarshalOptions{UseProtoNames: true, EmitUnpopulated: true}.Marshal(r)
-	} else {
-		data, err = json.Marshal(v)
-	}
+	data, err := marshalResponse(v)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal response failed: %w", err)
 	}
 
 	result := util.Response{
@@ -118,70 +132,144 @@ func CustomizeResponseEncoder(w http.ResponseWriter, r *http.Request, v interfac
 		Msg:  util.SuccessMsg,
 		Data: json.RawMessage(data),
 	}
-	body, _ := json.Marshal(result)
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_, _ = w.Write(body)
 
-	return nil
+	return writeJSON(w, result)
 }
 
+// CustomizeErrorEncoder 自定义错误编码器
 func CustomizeErrorEncoder(w http.ResponseWriter, r *http.Request, err error) {
-	se := kerrors.FromError(err)
-
-	codec := encoding.GetCodec("json")
-	respBody := util.Response{
-		Code:   util.ERROR,
-		Msg:    se.Message,
-		Data:   nil,
-		Reason: se.Reason,
-	}
-
-	if se.Code != kerrors.UnknownCode {
-		respBody.Code = int(se.Code)
-	}
-
-	servEx := "Server Exception"
-	switch e := err.(type) {
-	case *errors.UserError:
-		respBody.Code = int(e.Ke.Code)
-		respBody.Msg = e.Ke.Message
-		respBody.Reason = e.Ke.Reason
-		if e.Ke.Code == kerrors.UnknownCode {
-			respBody.Msg = servEx
-		}
-	case *kerrors.Error:
-		respBody.Msg = e.Message
-		if e.Code == kerrors.UnknownCode {
-			respBody.Msg = servEx
-		}
-	default:
-		if errors.Is(err, context.DeadlineExceeded) {
-			respBody.Msg = "Request timed out"
-		} else {
-			respBody.Msg = servEx
-		}
-	}
-
-	body, err := codec.Marshal(respBody)
+	resp := buildErrorResponse(err)
+	body, err := encoding.GetCodec("json").Marshal(resp)
 	if err != nil {
 		w.WriteHeader(stdhttp.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/"+codec.Name())
+
+	w.Header().Set("Content-Type", jsonContentType)
 	w.WriteHeader(stdhttp.StatusOK)
-	_, _ = w.Write(body)
+	w.Write(body)
 }
 
-// BasicAuth 认证中间件
+// buildErrorResponse 构建错误响应
+func buildErrorResponse(err error) util.Response {
+	se := kerrors.FromError(err)
+	resp := util.Response{
+		Code:   util.ERROR,
+		Msg:    se.Message,
+		Reason: se.Reason,
+	}
+
+	if se.Code != kerrors.UnknownCode {
+		resp.Code = int(se.Code)
+	}
+
+	switch e := err.(type) {
+	case *errors.UserError:
+		handleUserError(e, &resp)
+	case *kerrors.Error:
+		handleKratosError(e, &resp)
+	default:
+		handleDefaultError(err, &resp)
+	}
+
+	return resp
+}
+
+// handleUserError 处理用户错误
+func handleUserError(e *errors.UserError, resp *util.Response) {
+	resp.Code = int(e.Ke.Code)
+	resp.Msg = e.Ke.Message
+	resp.Reason = e.Ke.Reason
+	if e.Ke.Code == kerrors.UnknownCode {
+		resp.Msg = serverError
+	}
+}
+
+// handleKratosError 处理Kratos错误
+func handleKratosError(e *kerrors.Error, resp *util.Response) {
+	resp.Msg = e.Message
+	if e.Code == kerrors.UnknownCode {
+		resp.Msg = serverError
+	}
+}
+
+// handleDefaultError 处理默认错误
+func handleDefaultError(err error, resp *util.Response) {
+	if errors.Is(err, context.DeadlineExceeded) {
+		resp.Msg = timeoutError
+	} else {
+		resp.Msg = serverError
+	}
+}
+
+// marshalResponse 序列化响应
+func marshalResponse(v interface{}) ([]byte, error) {
+	if msg, ok := v.(proto.Message); ok {
+		return protojson.MarshalOptions{
+			UseProtoNames:   true,
+			EmitUnpopulated: true,
+		}.Marshal(msg)
+	}
+	return json.Marshal(v)
+}
+
+// writeJSON 写入JSON响应
+func writeJSON(w http.ResponseWriter, v interface{}) error {
+	body, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Errorf("marshal json failed: %w", err)
+	}
+
+	w.Header().Set("Content-Type", jsonContentType)
+	_, err = w.Write(body)
+	return err
+}
+
+// BasicAuth 基本认证中间件
 func BasicAuth(username, password string, next stdhttp.Handler) stdhttp.Handler {
 	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		user, pass, ok := r.BasicAuth()
 		if !ok || user != username || pass != password {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 			w.WriteHeader(stdhttp.StatusUnauthorized)
-			w.Write([]byte("Unauthorized"))
+			w.Write([]byte(unauthorized))
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// newWhiteListMatcher 创建白名单匹配器
+func newWhiteListMatcher() selector.MatchFunc {
+	whiteList := map[string]struct{}{
+		userv1.OperationUserServiceSendVerificationCode: {},
+	}
+
+	return func(ctx context.Context, operation string) bool {
+		_, ok := whiteList[operation]
+		return !ok
+	}
+}
+
+// logRoutes 记录所有路由
+func logRoutes(srv *http.Server) {
+	srv.WalkRoute(func(info http.RouteInfo) error {
+		fmt.Printf("Route: [%s] %s\n", info.Method, info.Path)
+		return nil
+	})
+}
+
+// getHTTPConfig 获取HTTP配置
+func getHTTPConfig(c *conf.Bootstrap) HTTPServerConfig {
+	var timeout time.Duration
+	if c.Server.Http.Timeout != nil {
+		timeout = c.Server.Http.Timeout.AsDuration()
+	}
+
+	return HTTPServerConfig{
+		Addr:     c.Server.Http.Addr,
+		Timeout:  timeout,
+		Username: "admin", // 可以从配置文件读取
+		Password: "admin",
+	}
 }

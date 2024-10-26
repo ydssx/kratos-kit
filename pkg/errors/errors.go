@@ -70,6 +70,11 @@ func (e *UserError) Error() string {
 	return fmt.Sprintf("error: code = %d reason = %s message = %s ", e.Ke.Code, e.Ke.Reason, e.Ke.Message)
 }
 
+// Unwrap 返回错误链中的下一个错误
+func (e *UserError) Unwrap() error {
+	return e.Ke
+}
+
 // NewUserError 创建用户级别的错误
 func NewUserError(message string) *UserError {
 	return &UserError{
@@ -77,7 +82,13 @@ func NewUserError(message string) *UserError {
 	}
 }
 
-// WrapAsUserError 将错误包装为用户级别的错误
-func WrapAsUserError(err error) *UserError {
+// ToUserError 将错误转换为用户级别的错误
+func ToUserError(err error) *UserError {
 	return &UserError{Ke: kerrors.FromError(err)}
+}
+
+// IsUserError 判断错误是否为用户级别的错误
+func IsUserError(err error) bool {
+	var userErr *UserError
+	return errors.As(err, &userErr)
 }
