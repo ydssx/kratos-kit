@@ -18,7 +18,7 @@ var (
 	// GormLoggerName gorm logger 名称
 	GormLoggerName = "gorm"
 	// GormLoggerCallerSkip caller skip
-	GormLoggerCallerSkip = 2
+	GormLoggerCallerSkip = 1
 )
 
 // GormLogger 使用 zap 来打印 gorm 的日志

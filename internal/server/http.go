@@ -265,7 +265,6 @@ func getHTTPConfig(c *conf.Bootstrap) HTTPServerConfig {
 	if c.Server.Http.Timeout != nil {
 		timeout = c.Server.Http.Timeout.AsDuration()
 	}
-
 	return HTTPServerConfig{
 		Addr:     c.Server.Http.Addr,
 		Timeout:  timeout,

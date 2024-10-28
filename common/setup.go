@@ -50,24 +50,29 @@ func NewCollection(c *conf.Bootstrap) *mongo.Collection {
 }
 
 func SetupLogger(c *conf.Bootstrap) {
-	logger.DefaultLogger = logger.NewLogger(logger.NewZapLogger(2,
-		c.Log.Path,
-		c.Log.Level,
-		int(c.Log.MaxSize),
-		int(c.Log.MaxAge),
-		int(c.Log.MaxBackups),
-		c.Log.Compress,
-		c.Log.EnableConsole,
+	// 使用 Option 函数配置 logger
+	defaultLogger := logger.NewLogger(logger.NewZapLogger(
+		logger.WithCallerSkip(3),
+		logger.WithLogPath(c.Log.Path),
+		logger.WithLevel(c.Log.Level),
+		logger.WithMaxSize(int(c.Log.MaxSize)),
+		logger.WithMaxAge(int(c.Log.MaxAge)),
+		logger.WithMaxBackups(int(c.Log.MaxBackups)),
+		logger.WithCompress(c.Log.Compress),
+		logger.WithEnableConsole(c.Log.EnableConsole),
 	))
+	logger.DefaultLogger = defaultLogger
 
-	klogger := log.With(logger.NewLogger(logger.NewZapLogger(3,
-		c.Log.Path,
-		c.Log.Level,
-		int(c.Log.MaxSize),
-		int(c.Log.MaxAge),
-		int(c.Log.MaxBackups),
-		c.Log.Compress,
-		c.Log.EnableConsole,
+	// 创建 kratos logger
+	klogger := log.With(logger.NewLogger(logger.NewZapLogger(
+		logger.WithCallerSkip(3),
+		logger.WithLogPath(c.Log.Path),
+		logger.WithLevel(c.Log.Level),
+		logger.WithMaxSize(int(c.Log.MaxSize)),
+		logger.WithMaxAge(int(c.Log.MaxAge)),
+		logger.WithMaxBackups(int(c.Log.MaxBackups)),
+		logger.WithCompress(c.Log.Compress),
+		logger.WithEnableConsole(c.Log.EnableConsole),
 	)),
 		"traceID", kratos.TraceID())
 	log.SetLogger(klogger)
