@@ -659,6 +659,8 @@ func (m *Server) validate(all bool) error {
 		}
 	}
 
+	// no validation rules for EnablePprof
+
 	if len(errors) > 0 {
 		return ServerMultiError(errors)
 	}

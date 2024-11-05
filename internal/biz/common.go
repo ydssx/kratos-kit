@@ -1,3 +1,4 @@
+// Package biz contains common business logic used across the application.
 package biz
 
 import (

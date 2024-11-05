@@ -3,6 +3,8 @@ package cache
 import (
 	"context"
 	"time"
+
+	"github.com/ydssx/kratos-kit/pkg/logger"
 )
 
 type Cache interface {
@@ -14,4 +16,24 @@ type Cache interface {
 	Delete(ctx context.Context, key string) error
 	// Clear 清空缓存中的所有键值对
 	Clear(ctx context.Context) error
+}
+
+// WithCache 通用缓存装饰器
+func WithCache[T any](c Cache, ctx context.Context, key string, duration time.Duration, fn func() (T, error)) (T, error) {
+	var data T
+	err := c.Get(ctx, key, &data)
+	if err == nil {
+		return data, nil
+	}
+
+	data, err = fn()
+	if err != nil {
+		return data, err
+	}
+
+	if err := c.Set(ctx, key, data, duration); err != nil {
+		logger.Errorf(ctx, "cache set error: %v", err)
+	}
+
+	return data, nil
 }

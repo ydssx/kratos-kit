@@ -39,6 +39,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	go.mongodb.org/mongo-driver v1.15.0
+	go.opentelemetry.io/otel/sdk/metric v1.31.0
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
@@ -63,7 +64,6 @@ require (
 	github.com/onsi/gomega v1.27.10 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	go.opentelemetry.io/otel/sdk v1.31.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.31.0 // indirect
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8 // indirect
 	golang.org/x/mod v0.19.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
