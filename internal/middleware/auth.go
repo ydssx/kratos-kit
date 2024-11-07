@@ -76,7 +76,7 @@ func parseToken(ctx context.Context, r *http.Request, geoip *geoip2.Reader) (*jw
 	clientIP := getClientIP(r)
 	claims := buildClaims(user, clientIP)
 
-	if err := handleUserLogin(ctx, user, clientIP, geoip, claims); err != nil {
+	if err := handleUserLogin(user, clientIP, geoip, claims); err != nil {
 		logger.Errorf(ctx, "handle user login error: %v", err)
 	}
 
@@ -85,7 +85,7 @@ func parseToken(ctx context.Context, r *http.Request, geoip *geoip2.Reader) (*jw
 }
 
 // handleUserLogin 处理用户登录相关逻辑
-func handleUserLogin(ctx context.Context, user *models.User, clientIP string, geoip *geoip2.Reader, claims *jwt.Claims) error {
+func handleUserLogin(user *models.User, clientIP string, geoip *geoip2.Reader, claims *jwt.Claims) error {
 	userLoginLog := buildLoginLog(user, clientIP)
 	needCreate := false
 

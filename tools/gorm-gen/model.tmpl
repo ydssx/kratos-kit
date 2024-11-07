@@ -3,8 +3,11 @@ package models
 import (
 	"context"
 
+	"github.com/Gre-Z/common/jtime"
 	"gorm.io/gorm"
 )
+
+var _ = jtime.JsonTime{}
 
 // table {{.TableName}} {{.TableComment}}
 type {{.Name | Title}} struct {

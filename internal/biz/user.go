@@ -255,28 +255,30 @@ func (uc *UserUseCase) GoogleCallback(ctx *gin.Context) (*userv1.LoginResponse, 
 	user, err := uc.repo.GetUserByGoogleID(ctx, userInfo.Id)
 	if err != nil {
 		user, err = uc.repo.GetUserByEmail(ctx, userInfo.Email)
-		if err != nil {
-			uuid := util.GetUUID()
-			_, err := uc.repo.CreateUser(ctx, &models.User{
-				UUID:       uuid,
-				Email:      userInfo.Email,
-				Username:   userInfo.Name,
-				FirstName:  userInfo.GivenName,
-				LastName:   userInfo.FamilyName,
-				AvatarPath: userInfo.Picture,
-				GoogleId:   userInfo.Id,
-			})
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to create user")
-			}
-			return &userv1.LoginResponse{
-				Uuid: uuid,
-			}, nil
+		if err == nil {
+			goto updateUser
 		}
+
+		uuid := util.GetUUID()
+		_, err := uc.repo.CreateUser(ctx, &models.User{
+			UUID:       uuid,
+			Email:      userInfo.Email,
+			Username:   userInfo.Name,
+			FirstName:  userInfo.GivenName,
+			LastName:   userInfo.FamilyName,
+			AvatarPath: userInfo.Picture,
+			GoogleId:   userInfo.Id,
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create user")
+		}
+		return &userv1.LoginResponse{
+			Uuid: uuid,
+		}, nil
+
 	}
 
-	if token != nil {
-	}
+updateUser:
 	// 更新用户的Google ID和头像
 	user.GoogleId = userInfo.Id
 	user.AvatarPath = userInfo.Picture

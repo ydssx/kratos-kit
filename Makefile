@@ -64,6 +64,14 @@ run:
 gorm-gen:
 	go run tools/gorm-gen/main.go
 
+.PHONY: pprof
+pprof:
+	go tool pprof -http=:8080 http://localhost:9003/debug/pprof/profile
+
+.PHONY: deploy
+deploy:
+	chmod +x scripts/deploy.sh
+	./scripts/deploy.sh
 
 .PHONY: all
 # generate all
