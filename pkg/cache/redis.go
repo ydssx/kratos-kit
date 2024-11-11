@@ -41,8 +41,6 @@ func (c *RedisCache) Get(ctx context.Context, key string, result interface{}) er
 }
 
 // Set 将指定的key/value对设置到redis中,并设置过期时间
-// 如果value不是json可序列化的,将返回错误
-// 过期时间会在指定的过期时间上再加上0-1秒的随机值,是为了防止大量key同时过期
 func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, expire time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {

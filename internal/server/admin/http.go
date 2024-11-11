@@ -20,7 +20,7 @@ import (
 
 func NewHttpServer(
 	c *conf.Bootstrap,
-	limiter *limit.RedisLimiter,
+	limiter limit.Limiter,
 	adminSvc *service.AdminService,
 ) *http.Server {
 	opts := []http.ServerOption{

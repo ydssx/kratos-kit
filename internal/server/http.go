@@ -49,7 +49,7 @@ func NewHTTPServer(
 	c *conf.Bootstrap,
 	ws *common.WsService,
 	geoip *geoip2.Reader,
-	limiter *limit.RedisLimiter,
+	limiter limit.Limiter,
 	ginServer *gin.Engine,
 	userSvc *service.UserService,
 ) *http.Server {
@@ -63,7 +63,7 @@ func NewHTTPServer(
 }
 
 // buildServerOptions 构建服务器选项
-func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter *limit.RedisLimiter) []http.ServerOption {
+func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter limit.Limiter) []http.ServerOption {
 	opts := []http.ServerOption{
 		http.Middleware(
 			recovery.Recovery(),
@@ -111,10 +111,8 @@ func registerRoutes(srv *http.Server, ws *common.WsService, userSvc *service.Use
 func registerBasicRoutes(srv *http.Server, username, password string, c *conf.Bootstrap) {
 	// 健康检查
 	srv.HandleFunc("/health", healthCheck)
-
 	// Prometheus 指标
 	srv.Handle("/metrics", promhttp.Handler())
-
 	// Asynq监控
 	h := asynqmon.New(asynqmon.Options{
 		RootPath:     "/monitor",

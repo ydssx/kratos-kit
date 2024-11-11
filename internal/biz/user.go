@@ -56,18 +56,6 @@ type (
 		// 积分数大于
 		PointsGt int64
 	}
-	ListRoleCond struct {
-		Page  int64  // 页码
-		Limit int64  // 条数
-		Name  string // 角色名称
-	}
-	AdminUserCollectCond struct {
-		VisitorsNum int32
-		PayNum      int32
-		NonPayNum   int32
-		FirstNum    int32
-		RenewNum    int32
-	}
 )
 
 type UserUseCase struct {

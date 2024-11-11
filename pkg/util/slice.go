@@ -4,21 +4,7 @@ import (
 	"math/rand"
 	"reflect"
 	"slices"
-	"time"
 )
-
-// SliceContain checks if a slice contains a given element.
-// It takes a slice s and an element target as parameters.
-// It returns true if target is found in s, false otherwise.
-//
-// Example:
-//
-//	slice := []int{1, 2, 3}
-//	contains := SliceContain(slice, 2) // true
-//	contains = SliceContain(slice, 4) // false
-func SliceContain[T comparable](s []T, target T) bool {
-	return slices.Contains(s, target)
-}
 
 // AppendIfMissing appends an element to a slice if it is not already present.
 //
@@ -154,35 +140,6 @@ func Unique[T comparable](s []T) []T {
 	return result
 }
 
-// SliceEqual returns true if two slices have the same elements in the same order.
-//
-// Parameters:
-//   - a: The first slice to compare.
-//   - b: The second slice to compare.
-//
-// Returns:
-//   - true if the two slices have the same elements in the same order.
-//   - false otherwise.
-//
-// Example:
-//
-//	slice1 := []int{1, 2, 3}
-//	slice2 := []int{1, 2, 3}
-//	slice3 := []int{1, 2, 4}
-//	fmt.Println(SliceEqual(slice1, slice2)) // Output: true
-//	fmt.Println(SliceEqual(slice1, slice3)) // Output: false
-func SliceEqual[T comparable](a, b []T) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
 // SliceIntersect returns the intersection of two slices.
 // It takes two slices a and b as parameters.
 // It returns a new slice containing the elements that are present in both a and b.
@@ -208,7 +165,7 @@ func SliceEqualAny[T comparable](a, b []T) bool {
 		return false
 	}
 	for _, v := range a {
-		if !SliceContain(b, v) {
+		if !slices.Contains(b, v) {
 			return false
 		}
 	}
@@ -217,69 +174,12 @@ func SliceEqualAny[T comparable](a, b []T) bool {
 
 // UniqueRandomSample returns a random sample of unique elements from the given slice.
 func UniqueRandomSample(slice []int, count int) []int {
-	rand.Seed(time.Now().UnixNano())
 	sample := []int{}
 	indices := rand.Perm(len(slice))
 	for i := 0; i < count && i < len(slice); i++ {
 		sample = append(sample, slice[indices[i]])
 	}
 	return sample
-}
-
-// 动态计算每页的 randomPick 值，确保不大于 pageSize
-func calculateRandomPick(page, pageSize int, totalPages int) int {
-	if page < totalPages/2 {
-		return 1 + (page*(pageSize-1))/(totalPages/2) // 前半部分逐渐增大
-	}
-	return 1 + (((page - totalPages/2) * (pageSize - 1)) / (totalPages / 2)) // 后半部分更快增大
-}
-
-// PaginateIds 分页函数，根据 ids 分页 ，每页包含 pageSize 个元素，返回的结果是包含多个 page 的数组，每页包含 pageSize 个元素的数组.
-func PaginateIds(ids []int, pageSize int, totalSize int) [][]int {
-	if len(ids) <= pageSize {
-		return [][]int{ids}
-	}
-	pages := [][]int{}
-	pageCount := (totalSize + pageSize - 1) / pageSize
-	startIndex := 0
-	initialSize := len(ids)
-	for i := 0; i < pageCount; i++ {
-		page := []int{}
-		randomPick := calculateRandomPick(i, pageSize, pageCount)
-		endIndex := startIndex + (pageSize - randomPick)
-		if i == 0 {
-			endIndex = pageSize - 1
-		}
-
-		if endIndex > initialSize {
-			endIndex = initialSize
-		}
-		if startIndex >= initialSize {
-			startIndex = initialSize
-		}
-
-		page = append(page, ids[startIndex:endIndex]...)
-
-		// 从前一页中随机选取视频
-		if i > 0 {
-			for len(page) < pageSize {
-				for j := 0; j < 10; j++ { // 最多尝试10次
-					prevPage := pages[rand.Intn(i)]
-					randomIndex := rand.Intn(len(prevPage))
-					if SliceContain(page, prevPage[randomIndex]) {
-						continue
-					}
-					page = append(page, prevPage[randomIndex])
-					break
-				}
-			}
-		}
-
-		pages = append(pages, page)
-
-		startIndex = endIndex
-	}
-	return pages
 }
 
 // FlattenSlice 将多维切片平铺为一维切片

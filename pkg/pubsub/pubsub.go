@@ -17,7 +17,6 @@ type Publisher interface {
 
 type Subscriber interface {
 	Subscribe(ctx context.Context, subject string, handler EventHandler, opts ...Subscription) error
-	SubscribeAsync(ctx context.Context, subject string, handler EventHandler, opts ...Subscription) error
 	Unsubscribe(ctx context.Context, subject string) error
 	UnsubscribeAll(ctx context.Context) error
 }
