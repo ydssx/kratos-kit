@@ -24,6 +24,7 @@ import (
 	"github.com/ydssx/kratos-kit/internal/service"
 	"github.com/ydssx/kratos-kit/pkg/errors"
 	"github.com/ydssx/kratos-kit/pkg/limit"
+	"github.com/ydssx/kratos-kit/pkg/sse"
 	"github.com/ydssx/kratos-kit/pkg/util"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -46,6 +47,7 @@ type HTTPServerConfig struct {
 
 // NewHTTPServer 创建HTTP服务器
 func NewHTTPServer(
+	ctx context.Context,
 	c *conf.Bootstrap,
 	ws *common.WsService,
 	geoip *geoip2.Reader,
@@ -58,6 +60,9 @@ func NewHTTPServer(
 
 	registerRoutes(srv, ws, userSvc, cfg, c)
 	logRoutes(srv)
+	RegisterSSE(ctx, srv)
+
+	srv.HandlePrefix("/", ginServer)
 
 	return srv
 }
@@ -278,4 +283,31 @@ func getHTTPConfig(c *conf.Bootstrap) HTTPServerConfig {
 		Username: "admin", // 可以从配置文件读取
 		Password: "admin",
 	}
+}
+
+// RegisterSSE 注册 SSE 端点
+func RegisterSSE(ctx context.Context, srv *http.Server) {
+	broker := sse.NewBroker()
+	broker.Start(ctx)
+
+	// 注册 SSE 端点
+	srv.Handle("/events", broker)
+
+	// 示例：定期发送事件
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				event := sse.NewEvent("ping", map[string]interface{}{
+					"timestamp": time.Now(),
+					"message":   "Server is alive",
+				})
+				broker.Publish(event)
+			case <-ctx.Done():
+				ticker.Stop()
+				return
+			}
+		}
+	}()
 }

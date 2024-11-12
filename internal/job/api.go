@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hibiken/asynq"
 	jobv1 "github.com/ydssx/kratos-kit/api/job/v1"
 	"github.com/ydssx/kratos-kit/constants"
 	"github.com/ydssx/kratos-kit/internal/biz"
 	"github.com/ydssx/kratos-kit/pkg/logger"
 	"github.com/ydssx/kratos-kit/pkg/util"
 
-	"github.com/hibiken/asynq"
+	"github.com/ydssx/kratos-kit/pkg/queue"
 )
-
-type jobHandler func(ctx context.Context, t *asynq.Task) error
 
 var (
 	// 定时任务注册
@@ -25,7 +24,7 @@ var (
 	}
 
 	// 任务处理函数注册
-	JobHandlerMap = map[jobv1.JobType]jobHandler{
+	JobHandlerMap = map[jobv1.JobType]queue.HandleFunc{
 		jobv1.JobType_CLEAN_OLD_LOG_FILES: ClearLogFile,
 	}
 )

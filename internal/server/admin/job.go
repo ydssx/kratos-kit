@@ -2,106 +2,81 @@ package admin
 
 import (
 	"context"
-	"time"
 
+	"github.com/ydssx/kratos-kit/common/conf"
 	"github.com/ydssx/kratos-kit/internal/biz"
 	"github.com/ydssx/kratos-kit/internal/job"
-
-	common2 "github.com/ydssx/kratos-kit/common"
-	"github.com/ydssx/kratos-kit/common/conf"
 	"github.com/ydssx/kratos-kit/pkg/logger"
-
-	"github.com/hibiken/asynq"
-	"golang.org/x/sync/errgroup"
+	"github.com/ydssx/kratos-kit/pkg/queue"
 )
 
 type JobServer struct {
-	sr  *asynq.Server
-	sd  *asynq.Scheduler
-	mux *asynq.ServeMux
+	client *queue.Client
 }
 
 func NewJobServer(c *conf.Bootstrap, serviceSet *biz.AdminUseCase) *JobServer {
-	opt := common2.InitJobRedisOpt(c)
-
-	server := asynq.NewServer(opt, asynq.Config{
-		Concurrency:  int(c.Asynq.Concurrency),
-		ErrorHandler: asynq.ErrorHandlerFunc(reportError),
+	cfg := &queue.Config{
+		RedisAddr:     c.Data.JobRedis.Addr,
+		RedisPassword: c.Data.JobRedis.Password,
+		RedisDB:       int(c.Data.JobRedis.Db),
+		Concurrency:   int(c.Asynq.Concurrency),
+		ReadTimeout:   c.Data.JobRedis.ReadTimeout.AsDuration(),
+		WriteTimeout:  c.Data.JobRedis.WriteTimeout.AsDuration(),
 		BaseContext: func() context.Context {
 			return biz.WithAdminUseCase(context.Background(), serviceSet)
 		},
-		Queues: map[string]int{
-			"critical": 6,
-			"default":  3,
-			"low":      1,
-		},
-		StrictPriority: c.Asynq.StrictPriority,
-	})
+	}
 
-	mux := asynq.NewServeMux()
-	registerJobHandler(mux)
+	client, err := queue.NewClient(cfg)
+	if err != nil {
+		panic(err)
+	}
 
-	scheduler := asynq.NewScheduler(opt, &asynq.SchedulerOpts{Location: time.Local})
-	registerCronJob(scheduler)
+	// 注册管理员任务处理器
+	registerJobHandler(client)
+	// 注册管理员定时任务
+	registerCronJob(client)
 
-	return &JobServer{sr: server, mux: mux, sd: scheduler}
+	return &JobServer{client: client}
 }
 
-// Start starts the JobServer, including the scheduler and the server.
-// It starts the scheduler and the server concurrently using goroutines.
-// It returns an error if any of the concurrent operations fail.
+// Start starts the JobServer
 func (j *JobServer) Start(ctx context.Context) error {
-	// Start the scheduler and the server concurrently.
-	eg := errgroup.Group{}
-
-	// Start the scheduler.
-	eg.Go(j.sd.Start)
-
-	// Start the server.
-	eg.Go(func() error {
-		// Start the server with the registered job handlers.
-		return j.sr.Start(j.mux)
-	})
-
-	// Wait for all the concurrent operations to complete.
-	// If any of the operations fail, the function returns the error.
-	return eg.Wait()
+	return j.client.Start()
 }
 
-// Stop 停止 JobServer,包括停止调度器和服务器。
-// 依次调用服务器和调度器的 Shutdown 方法进行优雅停止。
+// Stop stops the JobServer gracefully
 func (j *JobServer) Stop(ctx context.Context) error {
-	j.sr.Stop()
-	j.sr.Shutdown()
-	j.sd.Shutdown()
-	logger.Info(ctx, "job server stopped")
+	err := j.client.Close()
+	if err != nil {
+		logger.Errorf(ctx, "failed to stop admin job server: %v", err)
+		return err
+	}
+	logger.Info(ctx, "admin job server stopped")
 	return nil
 }
 
-func reportError(ctx context.Context, task *asynq.Task, err error) {
-	logger.Errorf(ctx, "执行任务失败,task_type:%s ,err: %v", task.Type(), err)
-}
-
-// registerJobHandler 注册 jobHandlerMap 中定义的所有 job 的处理函数到 ServeMux。
-// 它会遍历 jobHandlerMap,并为每个 job 注册对应的处理函数到 mux。
-// mux 会根据请求中的 job name 来路由到相应的处理函数。
-func registerJobHandler(mux *asynq.ServeMux) {
+// registerJobHandler registers all admin job handlers defined in AdminJobHandlerMap to the client
+func registerJobHandler(client *queue.Client) {
 	for k, v := range job.AdminJobHandlerMap {
-		mux.HandleFunc(k.String(), v)
+		client.RegisterHandler(k.String(), queue.HandleFunc(v))
 	}
 }
 
-// registerCronJob 注册定时任务的处理函数。
-// 它会遍历 cronJobMap 中定义的所有定时任务,并在调度器 sd 中注册对应的处理函数。
-// 如果某个定时任务在 jobHandlerMap 中没有找到对应的处理函数,会 panic。
-// 注册成功后,定时任务会按照 cronJobMap 中定义的时间表定期执行。
-func registerCronJob(sd *asynq.Scheduler) {
-	for k, jobType := range job.AdminCronJobMap {
+// registerCronJob registers all admin cron jobs defined in AdminCronJobMap
+func registerCronJob(client *queue.Client) {
+	for spec, jobType := range job.AdminCronJobMap {
 		err := job.ValidateAdminTask(jobType)
 		if err != nil {
 			panic(err)
 		}
-		_, err = sd.Register(k, asynq.NewTask(jobType.String(), nil))
+
+		task := &queue.Task{
+			TypeName: jobType.String(),
+			Payload:  nil,
+		}
+
+		err = client.EnqueuePeriodicTask(context.Background(), task, spec)
 		if err != nil {
 			panic(err)
 		}

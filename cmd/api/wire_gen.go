@@ -60,7 +60,7 @@ func wireApp(ctx context.Context, c *conf.Bootstrap, logger log.Logger) (*kratos
 	userUseCase := biz.NewUserUseCase(bizUserRepo, logger, transaction, commonUseCase, redisLocker, config, cache, email)
 	userService := service.NewUserService(userUseCase)
 	engine := server.NewGinServer(commonService, userService, reader)
-	httpServer := server.NewHTTPServer(c, wsService, reader, redisLimiter, engine, userService)
+	httpServer := server.NewHTTPServer(ctx, c, wsService, reader, redisLimiter, engine, userService)
 	usecaseSet := biz.NewUsecaseSet(userUseCase, uploadUseCase)
 	jobServer := server.NewJobServer(c, usecaseSet)
 	grpcServer := server.NewGRPCServer(c, reader)

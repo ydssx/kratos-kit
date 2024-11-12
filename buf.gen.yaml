@@ -1,6 +1,6 @@
 version: v2
 plugins:
-  - remote: buf.build/protocolbuffers/go:v1.34.1
+  - remote: buf.build/protocolbuffers/go
     out: .
     opt: paths=source_relative
   - remote: buf.build/bufbuild/validate-go
@@ -15,7 +15,7 @@ plugins:
       - allow_merge=true
       - json_names_for_fields=false
       - enums_as_ints=true
-  - remote: buf.build/grpc/go:v1.4.0
+  - remote: buf.build/grpc/go
     out: .
     opt:
       - paths=source_relative
