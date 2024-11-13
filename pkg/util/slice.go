@@ -1,9 +1,9 @@
 package util
 
 import (
-	"math/rand"
-	"reflect"
 	"slices"
+
+	"github.com/samber/lo"
 )
 
 // AppendIfMissing appends an element to a slice if it is not already present.
@@ -68,76 +68,18 @@ func Filter[T comparable](slice []T, f func(T) bool) []T {
 //	slice3 := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
 //	union := SliceUnion(slice1, slice2, slice3)
 //	fmt.Println(union) // Output: [1 2 3 4 5 6 7 8 9]
-func SliceUnion[T comparable](slices ...[]T) []T {
-	unionMap := make(map[T]bool)
-	for _, slice := range slices {
-		for _, elem := range slice {
-			unionMap[elem] = true
-		}
-	}
-	union := make([]T, 0, len(unionMap))
-	for elem := range unionMap {
-		union = append(union, elem)
-	}
-	return union
+func SliceUnion[T comparable, Slice ~[]T](slices ...Slice) Slice {
+	return lo.Union(slices...)
 }
 
-// SliceRemove 函数从给定的切片 s 中移除与参数 elems 中出现的元素相同的元素，并返回移除后的切片。
-// 参数：
-//   - s: 要进行元素移除操作的切片
-//   - elems: 要移除的元素列表
-//
-// 返回值：
-//   - 移除元素后的切片
-//
-// 示例：
-//
-//	s := []int{1, 2, 3, 4, 5}
-//	result := SliceRemove(s, 2, 4)
-//	fmt.Println(result) // Output: [1 3 5]
-func SliceRemove[T comparable](s []T, elems ...T) []T {
-	m := make(map[T]struct{})
-	for _, elem := range elems {
-		m[elem] = struct{}{}
-	}
-	result := make([]T, 0, len(s))
-	for _, v := range s {
-		if _, exists := m[v]; !exists {
-			result = append(result, v)
-		}
-	}
-	return result
+// SliceRemove removes elements from the given slice s.
+func SliceRemove[T comparable, Slice ~[]T](s Slice, elems ...T) Slice {
+	return lo.Without(s, elems...)
 }
 
 // Unique removes duplicate elements from the given slice s.
-// It returns a new slice with all the unique elements from s in the original order.
-// The element type T must be comparable.
-// It uses a map to keep track of seen elements.
-//
-// Parameters:
-//   - s: The slice to remove duplicates from.
-//
-// Returns:
-//   - A new slice with all the unique elements from s in the original order.
-//
-// Example:
-//
-//	s := []int{1, 2, 3, 2, 1, 4}
-//	result := Unique(s)
-//	fmt.Println(result) // Output: [1 2 3 4]
-func Unique[T comparable](s []T) []T {
-	if len(s) <= 1 {
-		return s
-	}
-	m := make(map[T]bool)
-	result := make([]T, 0, len(s))
-	for _, v := range s {
-		if !m[v] {
-			m[v] = true
-			result = append(result, v)
-		}
-	}
-	return result
+func Unique[T comparable, Slice ~[]T](s Slice) Slice {
+	return lo.Uniq(s)
 }
 
 // SliceIntersect returns the intersection of two slices.
@@ -160,44 +102,17 @@ func SliceIntersect[T comparable](a, b []T) []T {
 	return result
 }
 
-func SliceEqualAny[T comparable](a, b []T) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for _, v := range a {
-		if !slices.Contains(b, v) {
-			return false
-		}
-	}
-	return true
+// SliceEqualAny checks if all elements of slice a are present in slice b.
+func SliceEqualAny[T comparable, Slice ~[]T](a, b Slice) bool {
+	return slices.Equal(a, b)
 }
 
 // UniqueRandomSample returns a random sample of unique elements from the given slice.
-func UniqueRandomSample(slice []int, count int) []int {
-	sample := []int{}
-	indices := rand.Perm(len(slice))
-	for i := 0; i < count && i < len(slice); i++ {
-		sample = append(sample, slice[indices[i]])
-	}
-	return sample
+func UniqueRandomSample[T comparable, Slice ~[]T](slice Slice, count int) Slice {
+	return lo.Samples(slice, count)
 }
 
 // FlattenSlice 将多维切片平铺为一维切片
-func FlattenSlice[T any](slice interface{}) []T {
-	var result []T
-
-	switch reflect.TypeOf(slice).Kind() {
-	case reflect.Slice:
-		s := reflect.ValueOf(slice)
-		for i := 0; i < s.Len(); i++ {
-			item := s.Index(i).Interface()
-			if reflect.TypeOf(item).Kind() == reflect.Slice {
-				result = append(result, FlattenSlice[T](item)...)
-			} else if v, ok := item.(T); ok {
-				result = append(result, v)
-			}
-		}
-	}
-
-	return result
+func FlattenSlice[T any, Slice ~[]T](slice []Slice) Slice {
+	return lo.Flatten(slice)
 }

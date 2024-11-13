@@ -10,21 +10,25 @@ import (
 	"github.com/ydssx/kratos-kit/pkg/logger"
 )
 
-// Client wraps asynq client
-type Client struct {
+// Server wraps asynq client
+type Server struct {
 	client    *asynq.Client
 	srv       *asynq.Server
 	mux       *asynq.ServeMux
 	scheduler *asynq.Scheduler
 }
 
-// Config holds the configuration for asynq client
-type Config struct {
+type ConnConfig struct {
 	RedisAddr     string
 	RedisPassword string
 	RedisDB       int
 	ReadTimeout   time.Duration
 	WriteTimeout  time.Duration
+}
+
+// Config holds the configuration for asynq client
+type Config struct {
+	ConnConfig
 
 	// Queue configurations
 	Concurrency int
@@ -33,8 +37,8 @@ type Config struct {
 	BaseContext func() context.Context
 }
 
-// NewClient creates a new asynq client
-func NewClient(cfg *Config) (*Client, error) {
+// NewServer creates a new asynq server
+func NewServer(cfg *Config) (*Server, error) {
 	if cfg == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -70,7 +74,7 @@ func NewClient(cfg *Config) (*Client, error) {
 		&asynq.SchedulerOpts{Location: time.Local},
 	)
 
-	return &Client{
+	return &Server{
 		client:    client,
 		srv:       srv,
 		mux:       mux,
@@ -79,7 +83,7 @@ func NewClient(cfg *Config) (*Client, error) {
 }
 
 // Close closes the client
-func (c *Client) Close() error {
+func (c *Server) Close() error {
 	if c.client != nil {
 		c.client.Close()
 	}
@@ -99,32 +103,16 @@ type Task struct {
 	Payload  interface{}
 }
 
-// EnqueueTask enqueues a task
-func (c *Client) EnqueueTask(ctx context.Context, task *Task, opts ...asynq.Option) error {
-	payload, err := json.Marshal(task.Payload)
-	if err != nil {
-		return errors.Errorf("failed to marshal task payload: %v", err)
-	}
-
-	t := asynq.NewTask(task.TypeName, payload)
-	_, err = c.client.EnqueueContext(ctx, t, opts...)
-	if err != nil {
-		return errors.Errorf("failed to enqueue task: %v", err)
-	}
-
-	return nil
-}
-
 // HandleFunc represents a task handler function
 type HandleFunc func(context.Context, *asynq.Task) error
 
 // RegisterHandler registers a task handler
-func (c *Client) RegisterHandler(taskType string, handler HandleFunc) {
+func (c *Server) RegisterHandler(taskType string, handler HandleFunc) {
 	c.mux.HandleFunc(taskType, handler)
 }
 
 // Start starts the task processor
-func (c *Client) Start() error {
+func (c *Server) Start() error {
 	err := c.srv.Start(c.mux)
 	if err != nil {
 		return errors.Errorf("failed to start task processor: %v", err)
@@ -136,13 +124,8 @@ func (c *Client) Start() error {
 	return nil
 }
 
-// EnqueueTaskWithDelay enqueues a task with delay
-func (c *Client) EnqueueTaskWithDelay(ctx context.Context, task *Task, delay time.Duration) error {
-	return c.EnqueueTask(ctx, task, asynq.ProcessIn(delay))
-}
-
 // EnqueuePeriodicTask enqueues a periodic task
-func (c *Client) EnqueuePeriodicTask(ctx context.Context, task *Task, spec string) error {
+func (c *Server) EnqueuePeriodicTask(ctx context.Context, task *Task, spec string) error {
 	payload, err := json.Marshal(task.Payload)
 	if err != nil {
 		return errors.Errorf("failed to marshal task payload: %v", err)
@@ -159,4 +142,46 @@ func (c *Client) EnqueuePeriodicTask(ctx context.Context, task *Task, spec strin
 
 func reportError(ctx context.Context, task *asynq.Task, err error) {
 	logger.Errorf(ctx, "执行任务失败,task_type:%s ,err: %v", task.Type(), err)
+}
+
+// Client wraps asynq client
+type Client struct {
+	client    *asynq.Client
+	inspector *asynq.Inspector
+}
+
+// NewClient creates a new asynq client
+func NewClient(cfg *ConnConfig) *Client {
+	opt := asynq.RedisClientOpt{
+		Addr:         cfg.RedisAddr,
+		Password:     cfg.RedisPassword,
+		DB:           cfg.RedisDB,
+		ReadTimeout:  cfg.ReadTimeout,
+		WriteTimeout: cfg.WriteTimeout,
+	}
+	return &Client{
+		client:    asynq.NewClient(opt),
+		inspector: asynq.NewInspector(opt),
+	}
+}
+
+// EnqueueTask enqueues a task
+func (c *Client) EnqueueTask(ctx context.Context, task *Task, opts ...asynq.Option) error {
+	payload, err := json.Marshal(task.Payload)
+	if err != nil {
+		return errors.Errorf("failed to marshal task payload: %v", err)
+	}
+
+	t := asynq.NewTask(task.TypeName, payload)
+	_, err = c.client.EnqueueContext(ctx, t, opts...)
+	if err != nil {
+		return errors.Errorf("failed to enqueue task: %v", err)
+	}
+
+	return nil
+}
+
+// EnqueueTaskWithDelay enqueues a task with delay
+func (c *Client) EnqueueTaskWithDelay(ctx context.Context, task *Task, delay time.Duration) error {
+	return c.EnqueueTask(ctx, task, asynq.ProcessIn(delay))
 }

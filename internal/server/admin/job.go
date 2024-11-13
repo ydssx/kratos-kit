@@ -11,23 +11,25 @@ import (
 )
 
 type JobServer struct {
-	client *queue.Client
+	client *queue.Server
 }
 
 func NewJobServer(c *conf.Bootstrap, serviceSet *biz.AdminUseCase) *JobServer {
 	cfg := &queue.Config{
-		RedisAddr:     c.Data.JobRedis.Addr,
-		RedisPassword: c.Data.JobRedis.Password,
-		RedisDB:       int(c.Data.JobRedis.Db),
-		Concurrency:   int(c.Asynq.Concurrency),
-		ReadTimeout:   c.Data.JobRedis.ReadTimeout.AsDuration(),
-		WriteTimeout:  c.Data.JobRedis.WriteTimeout.AsDuration(),
+		ConnConfig: queue.ConnConfig{
+			RedisAddr:     c.Data.JobRedis.Addr,
+			RedisPassword: c.Data.JobRedis.Password,
+			RedisDB:       int(c.Data.JobRedis.Db),
+			ReadTimeout:   c.Data.JobRedis.ReadTimeout.AsDuration(),
+			WriteTimeout:  c.Data.JobRedis.WriteTimeout.AsDuration(),
+		},
+		Concurrency: int(c.Asynq.Concurrency),
 		BaseContext: func() context.Context {
 			return biz.WithAdminUseCase(context.Background(), serviceSet)
 		},
 	}
 
-	client, err := queue.NewClient(cfg)
+	client, err := queue.NewServer(cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -57,14 +59,14 @@ func (j *JobServer) Stop(ctx context.Context) error {
 }
 
 // registerJobHandler registers all admin job handlers defined in AdminJobHandlerMap to the client
-func registerJobHandler(client *queue.Client) {
+func registerJobHandler(client *queue.Server) {
 	for k, v := range job.AdminJobHandlerMap {
 		client.RegisterHandler(k.String(), queue.HandleFunc(v))
 	}
 }
 
 // registerCronJob registers all admin cron jobs defined in AdminCronJobMap
-func registerCronJob(client *queue.Client) {
+func registerCronJob(client *queue.Server) {
 	for spec, jobType := range job.AdminCronJobMap {
 		err := job.ValidateAdminTask(jobType)
 		if err != nil {

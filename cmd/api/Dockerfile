@@ -6,7 +6,7 @@ WORKDIR /src
 
 COPY . .
 
-RUN go build -o /bin .//cmd/api
+RUN go build -o /bin ./cmd/api
 
 FROM alpine
 
@@ -21,4 +21,4 @@ COPY --from=builder /src/configs ./
 
 EXPOSE 9000
 
-CMD [ "./api","-f","./configs/config.yaml" ]
+CMD [ "./api","-f","./configs/config.local.yaml" ]

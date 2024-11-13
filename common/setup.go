@@ -14,6 +14,7 @@ import (
 	"github.com/ydssx/kratos-kit/pkg/lock"
 	"github.com/ydssx/kratos-kit/pkg/logger"
 	"github.com/ydssx/kratos-kit/pkg/middleware/kratos"
+	"github.com/ydssx/kratos-kit/pkg/queue"
 	"github.com/ydssx/kratos-kit/pkg/storage"
 
 	"github.com/go-kratos/kratos/v2/log"
@@ -105,12 +106,14 @@ func InitJobRedisOpt(c *conf.Bootstrap) asynq.RedisClientOpt {
 	}
 }
 
-func NewAsynqClient(c *conf.Bootstrap) *asynq.Client {
-	return asynq.NewClient(InitRedisOpt(c))
-}
-
-func NewAsynqInspector(c *conf.Bootstrap) *asynq.Inspector {
-	return asynq.NewInspector(InitRedisOpt(c))
+func NewQueueClient(c *conf.Bootstrap) *queue.Client {
+	return queue.NewClient(&queue.ConnConfig{
+		RedisAddr:     c.Data.Redis.Addr,
+		RedisPassword: c.Data.Redis.Password,
+		RedisDB:       int(c.Data.Redis.Db),
+		ReadTimeout:   c.Data.Redis.ReadTimeout.AsDuration(),
+		WriteTimeout:  c.Data.Redis.WriteTimeout.AsDuration(),
+	})
 }
 
 func NewGoogleCloudStorage(c *conf.Bootstrap) (*storage.GoogleCloudStorage, func()) {

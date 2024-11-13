@@ -17,6 +17,7 @@ import (
 	"github.com/bwmarrin/snowflake"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/spf13/cast"
 	"golang.org/x/exp/constraints"
 )
@@ -514,11 +515,6 @@ func MapDecode(data map[string]any, v any) error {
 //	data := []MyStruct{{ID: 1, Name: "John"}, {ID: 2, Name: "Jane"}, {ID: 1, Name: "Jack"}}
 //	result := GroupBy(data, func(s MyStruct) int { return s.ID })
 //	// result will be map[int][]MyStruct{1: {{ID: 1, Name: "John"}, {ID: 1, Name: "Jack"}}, 2: {{ID: 2, Name: "Jane"}}}
-func GroupBy[T any, K comparable](slice []T, keyFunc func(T) K) map[K][]T {
-	result := make(map[K][]T)
-	for _, item := range slice {
-		key := keyFunc(item)
-		result[key] = append(result[key], item)
-	}
-	return result
+func GroupBy[T any, K comparable, Slice ~[]T](slice Slice, keyFunc func(T) K) map[K]Slice {
+	return lo.GroupBy(slice, keyFunc)
 }

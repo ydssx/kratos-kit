@@ -11,23 +11,25 @@ import (
 )
 
 type JobServer struct {
-	client *queue.Client
+	client *queue.Server
 }
 
 func NewJobServer(c *conf.Bootstrap, serviceSet *biz.UsecaseSet) *JobServer {
 	cfg := &queue.Config{
-		RedisAddr:     c.Data.Redis.Addr,
-		RedisPassword: c.Data.Redis.Password,
-		RedisDB:       int(c.Data.Redis.Db),
+		ConnConfig: queue.ConnConfig{
+			RedisAddr:     c.Data.Redis.Addr,
+			RedisPassword: c.Data.Redis.Password,
+			RedisDB:       int(c.Data.Redis.Db),
+			ReadTimeout:   c.Data.Redis.ReadTimeout.AsDuration(),
+			WriteTimeout:  c.Data.Redis.WriteTimeout.AsDuration(),
+		},
 		Concurrency:   int(c.Asynq.Concurrency),
-		ReadTimeout:   c.Data.Redis.ReadTimeout.AsDuration(),
-		WriteTimeout:  c.Data.Redis.WriteTimeout.AsDuration(),
 		BaseContext: func() context.Context {
 			return biz.NewContextWithUsecaseSet(context.Background(), serviceSet)
 		},
 	}
 
-	client, err := queue.NewClient(cfg)
+	client, err := queue.NewServer(cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -57,14 +59,14 @@ func (j *JobServer) Stop(ctx context.Context) error {
 }
 
 // registerJobHandler registers all job handlers defined in jobHandlerMap to the client
-func registerJobHandler(client *queue.Client) {
+func registerJobHandler(client *queue.Server) {
 	for k, v := range job.JobHandlerMap {
 		client.RegisterHandler(k.String(), queue.HandleFunc(v))
 	}
 }
 
 // registerCronJob registers all cron jobs defined in cronJobMap
-func registerCronJob(client *queue.Client) {
+func registerCronJob(client *queue.Server) {
 	for spec, jobType := range job.CronJobMap {
 		err := job.ValidateTask(jobType)
 		if err != nil {
