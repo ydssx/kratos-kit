@@ -52,7 +52,7 @@ func (m *{{.Name | Lower}}Model) WithContext(ctx context.Context) *{{.Name | Low
 	return m
 }
 
-func (m *{{.Name | Lower}}Model) Create({{.Name | Lower}} {{.Name | Title | Title}}) error {
+func (m *{{.Name | Lower}}Model) Create({{.Name | Lower}} *{{.Name | Title}}) error {
 	return m.db.Create(&{{.Name | Lower}}).Error
 }
 

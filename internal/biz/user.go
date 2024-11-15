@@ -189,9 +189,7 @@ func (uc *UserUseCase) Create(ctx context.Context, req *userv1.CreateRequest) (r
 }
 
 // IsAccountExist 检测邮箱账号是否存在
-func (uc *UserUseCase) IsAccountExist(ctx context.Context,
-	req *userv1.IsAccountExistRequest,
-) (*userv1.IsAccountExistResponse, error) {
+func (uc *UserUseCase) IsAccountExist(ctx context.Context, req *userv1.IsAccountExistRequest) (*userv1.IsAccountExistResponse, error) {
 	_, err := uc.repo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
 		if err.Error() == "user not found" {

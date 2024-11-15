@@ -12,10 +12,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"text/template"
-
-	"github.com/ydssx/kratos-kit/pkg/util"
 
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -213,7 +212,7 @@ func parseProto(protoFile string) (info ServiceInfo, supportHttp bool) {
 			info.RpcMeths = append(info.RpcMeths, x)
 
 			// Add the package to the Pkgs slice in the ServiceInfo struct if it doesn't already exist
-			if !util.SliceContain(info.Pkgs, pkg) && pkg != "" {
+			if !slices.Contains(info.Pkgs, pkg) && pkg != "" {
 				info.Pkgs = append(info.Pkgs, pkg)
 			}
 		}),

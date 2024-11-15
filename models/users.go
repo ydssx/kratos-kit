@@ -10,24 +10,22 @@ import (
 // table users 用户表
 type User struct {
 	BaseModel
-	Username               string `json:"username" gorm:"column:username;not null"`
-	Email                  string `json:"email" gorm:"column:email;not null"`                 // 登录邮箱
-	AvatarPath             string `json:"avatar_path" gorm:"column:avatar_path;default:NULL"` // 头像路径
-	PasswordHash           string `json:"password_hash" gorm:"column:password_hash;not null"`
-	GoogleId               string `json:"google_id" gorm:"column:google_id;default:NULL"`                           // google登录id
-	UUID                   string `json:"uuid" gorm:"column:uuid;not null"`
-	Type                   int    `json:"type" gorm:"column:type;not null;default:0"`
-	IPAddress              string `json:"ip_address" gorm:"column:ip_address"`
-	CountryCode            string `json:"country_code" gorm:"column:country_code"`
-	CityCode               string `json:"city_code" gorm:"column:city_code"`
-	CountryName            string `json:"country_name" gorm:"column:country_name"`
-	ZipCode                string `json:"zip_code" gorm:"column:zip_code"`
-	Platform               int    `json:"platform" gorm:"column:platform;default:1"`                                   // 注册来源平台,1:h5,2:pc
-	FirstName              string `json:"first_name" gorm:"column:first_name"`                                         // 姓
-	LastName               string `json:"last_name" gorm:"column:last_name"`                                           // 名
-	BrowserFingerprint     string `json:"browser_fingerprint" gorm:"column:browser_fingerprint"`                       // 浏览器指纹
-	Note                   string `json:"note" gorm:"column:note"`                                                     // 备注
-	DeviceModel            string `json:"device_model" gorm:"column:device_model"`                                     // 设备型号
+	Username           string `json:"username" gorm:"column:username;not null"`
+	Email              string `json:"email" gorm:"column:email;not null"`                 // 登录邮箱
+	AvatarPath         string `json:"avatar_path" gorm:"column:avatar_path;default:NULL"` // 头像路径
+	PasswordHash       string `json:"password_hash" gorm:"column:password_hash;not null"`
+	GoogleId           string `json:"google_id" gorm:"column:google_id;default:NULL"` // google登录id
+	UUID               string `json:"uuid" gorm:"column:uuid;not null"`
+	Type               int    `json:"type" gorm:"column:type;not null;default:0"`
+	IPAddress          string `json:"ip_address" gorm:"column:ip_address"`
+	CountryCode        string `json:"country_code" gorm:"column:country_code"`
+	CityCode           string `json:"city_code" gorm:"column:city_code"`
+	CountryName        string `json:"country_name" gorm:"column:country_name"`
+	ZipCode            string `json:"zip_code" gorm:"column:zip_code"`
+	Platform           int    `json:"platform" gorm:"column:platform;default:1"`             // 注册来源平台,1:h5,2:pc
+	FirstName          string `json:"first_name" gorm:"column:first_name"`                   // 姓
+	LastName           string `json:"last_name" gorm:"column:last_name"`                     // 名
+	BrowserFingerprint string `json:"browser_fingerprint" gorm:"column:browser_fingerprint"` // 浏览器指纹
 }
 
 type UserType int

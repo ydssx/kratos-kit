@@ -32,7 +32,7 @@ func NewGinServer(commonSvc *service.CommonService, userSvc *service.UserService
 	)
 
 	// Add a GET route for the API documentation
-	server.GET("/docs", docsHandler)
+	server.GET("/docs", gin.BasicAuth(gin.Accounts{"admin": "admin"}), docsHandler)
 
 	// Add a GET route for the Swagger UI
 	// The Swagger UI is accessible at http://localhost:9000/swagger/index.html

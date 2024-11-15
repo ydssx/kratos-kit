@@ -11,14 +11,14 @@ import (
 // table user_login_logs 用户上线日志表
 type UserLoginLog struct {
 	ID          uint           `json:"id" gorm:"primary_key"`
-	UserId      int            `json:"user_id" gorm:"column:user_id;not null"`             // 用户ID
-	LoginDate   jtime.JsonTime `json:"login_date" gorm:"column:login_date;not null"`       // 登录日期
-	IpAddress   string         `json:"ip_address" gorm:"column:ip_address"`     // IP地址
-	CountryName string         `json:"country_name" gorm:"column:country_name"` // 国家名
-	CountryCode string         `json:"country_code" gorm:"column:country_code"` // 国家编码
-	CityName    string         `json:"city_name" gorm:"column:city_name"`       // 城市名
-	Extra       string         `json:"extra" gorm:"column:extra"`                          // 附加信息
-	CreatedAt   jtime.JsonTime `json:"created_at" gorm:"column:created_at"`                // 创建时间
+	UserId      int            `json:"user_id" gorm:"column:user_id;not null"`       // 用户ID
+	LoginDate   jtime.JsonTime `json:"login_date" gorm:"column:login_date;not null"` // 登录日期
+	IpAddress   string         `json:"ip_address" gorm:"column:ip_address"`          // IP地址
+	CountryName string         `json:"country_name" gorm:"column:country_name"`      // 国家名
+	CountryCode string         `json:"country_code" gorm:"column:country_code"`      // 国家编码
+	CityName    string         `json:"city_name" gorm:"column:city_name"`            // 城市名
+	Extra       string         `json:"extra" gorm:"column:extra"`                    // 附加信息
+	CreatedAt   jtime.JsonTime `json:"created_at" gorm:"column:created_at"`          // 创建时间
 }
 
 type userLoginLogModel DB

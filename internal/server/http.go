@@ -8,6 +8,7 @@ import (
 	"net/http/pprof"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"
 	"github.com/go-kratos/kratos/v2/encoding"
 	kerrors "github.com/go-kratos/kratos/v2/errors"
@@ -59,8 +60,8 @@ func NewHTTPServer(
 	srv := http.NewServer(buildServerOptions(cfg, geoip, limiter)...)
 
 	registerRoutes(srv, ws, userSvc, cfg, c)
-	logRoutes(srv)
 	RegisterSSE(ctx, srv)
+	logRoutes(srv)
 
 	srv.HandlePrefix("/", ginServer)
 
@@ -266,7 +267,7 @@ func newWhiteListMatcher() selector.MatchFunc {
 // logRoutes 记录所有路由
 func logRoutes(srv *http.Server) {
 	srv.WalkRoute(func(info http.RouteInfo) error {
-		fmt.Printf("Route: [%s] %s\n", info.Method, info.Path)
+		fmt.Printf("Route: [%s] %s\n", color.CyanString(info.Method), color.GreenString(info.Path))
 		return nil
 	})
 }
@@ -295,7 +296,7 @@ func RegisterSSE(ctx context.Context, srv *http.Server) {
 
 	// 示例：定期发送事件
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(1 * time.Second)
 		for {
 			select {
 			case <-ticker.C:
