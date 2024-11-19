@@ -204,6 +204,7 @@ func handleKratosError(e *kerrors.Error, resp *util.Response) {
 	if e.Code == kerrors.UnknownCode {
 		resp.Msg = serverError
 	}
+	resp.Reason = e.Reason
 }
 
 // handleDefaultError 处理默认错误
@@ -212,6 +213,7 @@ func handleDefaultError(err error, resp *util.Response) {
 		resp.Msg = timeoutError
 	} else {
 		resp.Msg = serverError
+		resp.Reason = err.Error()
 	}
 }
 

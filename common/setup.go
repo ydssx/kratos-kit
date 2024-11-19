@@ -28,52 +28,54 @@ import (
 )
 
 func NewRedisCLient(c *conf.Bootstrap) (*goredis.Client, error) {
-	redisConf := c.Data.Redis
+	redisConf := c.Data.GetRedis()
 	return redis.NewRedis(&goredis.Options{
-		Addr:         redisConf.Addr,
-		Password:     redisConf.Password,
-		Username:     redisConf.Username,
-		ReadTimeout:  redisConf.ReadTimeout.AsDuration(),
-		WriteTimeout: redisConf.WriteTimeout.AsDuration(),
-		DialTimeout:  redisConf.DialTimeout.AsDuration(),
-		DB:           int(redisConf.Db),
+		Addr:         redisConf.GetAddr(),
+		Password:     redisConf.GetPassword(),
+		Username:     redisConf.GetUsername(),
+		ReadTimeout:  redisConf.GetReadTimeout().AsDuration(),
+		WriteTimeout: redisConf.GetWriteTimeout().AsDuration(),
+		DialTimeout:  redisConf.GetDialTimeout().AsDuration(),
+		DB:           int(redisConf.GetDb()),
 	})
 }
 
 func NewMysqlDB(c *conf.Bootstrap) (*gorm.DB, error) {
-	return mysql.NewDB(c.Data.Database.Source...)
+	return mysql.NewDB(c.Data.GetDatabase().GetSource()...)
 }
 
 func NewCollection(c *conf.Bootstrap) *mongo.Collection {
-	mongoConf := c.Data.Mongo
-	db := mongodb.NewMongo(mongoConf.Addr, mongoConf.Database)
-	return db.Collection(mongoConf.Collection)
+	mongoConf := c.Data.GetMongo()
+	db := mongodb.NewMongo(mongoConf.GetAddr(), mongoConf.GetDatabase())
+	return db.Collection(mongoConf.GetCollection())
 }
 
 func SetupLogger(c *conf.Bootstrap) {
 	// 使用 Option 函数配置 logger
 	defaultLogger := logger.NewLogger(logger.NewZapLogger(
 		logger.WithCallerSkip(3),
-		logger.WithLogPath(c.Log.Path),
-		logger.WithLevel(c.Log.Level),
-		logger.WithMaxSize(int(c.Log.MaxSize)),
-		logger.WithMaxAge(int(c.Log.MaxAge)),
-		logger.WithMaxBackups(int(c.Log.MaxBackups)),
-		logger.WithCompress(c.Log.Compress),
-		logger.WithEnableConsole(c.Log.EnableConsole),
+		logger.WithLogPath(c.Log.GetPath()),
+		logger.WithLevel(c.Log.GetLevel()),
+		logger.WithMaxSize(int(c.Log.GetMaxSize())),
+		logger.WithMaxAge(int(c.Log.GetMaxAge())),
+		logger.WithMaxBackups(int(c.Log.GetMaxBackups())),
+		logger.WithCompress(c.Log.GetCompress()),
+		logger.WithEnableConsole(c.Log.GetEnableConsole()),
+		logger.WithWebhook(c.Webhook.GetUrl()),
 	))
 	logger.DefaultLogger = defaultLogger
 
 	// 创建 kratos logger
 	klogger := log.With(logger.NewLogger(logger.NewZapLogger(
 		logger.WithCallerSkip(3),
-		logger.WithLogPath(c.Log.Path),
-		logger.WithLevel(c.Log.Level),
-		logger.WithMaxSize(int(c.Log.MaxSize)),
-		logger.WithMaxAge(int(c.Log.MaxAge)),
-		logger.WithMaxBackups(int(c.Log.MaxBackups)),
-		logger.WithCompress(c.Log.Compress),
-		logger.WithEnableConsole(c.Log.EnableConsole),
+		logger.WithLogPath(c.Log.GetPath()),
+		logger.WithLevel(c.Log.GetLevel()),
+		logger.WithMaxSize(int(c.Log.GetMaxSize())),
+		logger.WithMaxAge(int(c.Log.GetMaxAge())),
+		logger.WithMaxBackups(int(c.Log.GetMaxBackups())),
+		logger.WithCompress(c.Log.GetCompress()),
+		logger.WithEnableConsole(c.Log.GetEnableConsole()),
+		logger.WithWebhook(c.Webhook.GetUrl()),
 	)),
 		"traceID", kratos.TraceID())
 	log.SetLogger(klogger)
@@ -85,39 +87,39 @@ var (
 )
 
 func InitRedisOpt(c *conf.Bootstrap) asynq.RedisClientOpt {
-	redisConf := c.Data.Redis
+	redisConf := c.Data.GetRedis()
 	once.Do(func() {
 		rdbClientOpt = asynq.RedisClientOpt{
-			Addr:     redisConf.Addr,
-			Password: redisConf.Password,
-			DB:       int(redisConf.Db),
+			Addr:     redisConf.GetAddr(),
+			Password: redisConf.GetPassword(),
+			DB:       int(redisConf.GetDb()),
 		}
 	})
 	return rdbClientOpt
 }
 
 func InitJobRedisOpt(c *conf.Bootstrap) asynq.RedisClientOpt {
-	redisConf := c.Data.JobRedis
+	redisConf := c.Data.GetJobRedis()
 
 	return asynq.RedisClientOpt{
-		Addr:     redisConf.Addr,
-		Password: redisConf.Password,
-		DB:       int(redisConf.Db),
+		Addr:     redisConf.GetAddr(),
+		Password: redisConf.GetPassword(),
+		DB:       int(redisConf.GetDb()),
 	}
 }
 
 func NewQueueClient(c *conf.Bootstrap) *queue.Client {
 	return queue.NewClient(&queue.ConnConfig{
-		RedisAddr:     c.Data.Redis.Addr,
-		RedisPassword: c.Data.Redis.Password,
-		RedisDB:       int(c.Data.Redis.Db),
-		ReadTimeout:   c.Data.Redis.ReadTimeout.AsDuration(),
-		WriteTimeout:  c.Data.Redis.WriteTimeout.AsDuration(),
+		RedisAddr:     c.Data.GetRedis().GetAddr(),
+		RedisPassword: c.Data.GetRedis().GetPassword(),
+		RedisDB:       int(c.Data.GetRedis().GetDb()),
+		ReadTimeout:   c.Data.GetRedis().GetReadTimeout().AsDuration(),
+		WriteTimeout:  c.Data.GetRedis().GetWriteTimeout().AsDuration(),
 	})
 }
 
 func NewGoogleCloudStorage(c *conf.Bootstrap) (*storage.GoogleCloudStorage, func()) {
-	return storage.NewGoogleCloudStorage(c.Gcs.BucketName, c.Gcs.ProjectId, c.Gcs.CredentialsFile)
+	return storage.NewGoogleCloudStorage(c.Gcs.GetBucketName(), c.Gcs.GetProjectId(), c.Gcs.GetCredentialsFile())
 }
 
 // NewGeoipDB returns a new GeoipDB.
@@ -142,9 +144,9 @@ func NewRedisLocker(rdb *goredis.Client) *lock.RedisLocker {
 // 初始化Google OAuth配置
 func InitGoogleOAuth(c *conf.Bootstrap) *oauth2.Config {
 	return &oauth2.Config{
-		ClientID:     c.Google.ClientId,
-		ClientSecret: c.Google.ClientSecret,
-		RedirectURL:  c.Google.RedirectUrl,
+		ClientID:     c.Google.GetClientId(),
+		ClientSecret: c.Google.GetClientSecret(),
+		RedirectURL:  c.Google.GetRedirectUrl(),
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/userinfo.profile",
@@ -161,5 +163,11 @@ func SetEnv(c *conf.Bootstrap) {
 }
 
 func NewEmail(c *conf.Bootstrap) *email.Email {
-	return email.NewEmail(c.Email.Host, int(c.Email.Port), c.Email.Username, c.Email.Password, c.Email.From)
+	return email.NewEmail(
+		c.Email.GetHost(),
+		int(c.Email.GetPort()),
+		c.Email.GetUsername(),
+		c.Email.GetPassword(),
+		c.Email.GetFrom(),
+	)
 }
