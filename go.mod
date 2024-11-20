@@ -18,7 +18,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.1.0
 	github.com/fatih/color v1.13.0
 	github.com/gin-gonic/gin v1.10.0
-	github.com/go-kratos/kratos/v2 v2.8.1
+	github.com/go-kratos/kratos/v2 v2.8.2
 	github.com/go-playground/validator/v10 v10.20.0
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/go-redsync/redsync/v4 v4.13.0
@@ -34,8 +34,10 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.2
 	github.com/redis/go-redis/v9 v9.6.1
+	github.com/samber/lo v1.47.0
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/cobra v1.8.1
+	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	go.mongodb.org/mongo-driver v1.15.0
@@ -62,6 +64,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/onsi/gomega v1.27.10 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	go.opentelemetry.io/otel/sdk v1.31.0 // indirect
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8 // indirect

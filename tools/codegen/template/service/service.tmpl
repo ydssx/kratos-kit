@@ -7,9 +7,17 @@ import (
 	"{{.module}}/internal/biz"
 	{{range .serviceInfo.Pkgs}}"{{.}}"
 	{{end }}
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var _ = context.Background
+var (
+	_ = context.Background
+	_ = emptypb.Empty{}
+	_ = timestamppb.Timestamp{}
+	_ = durationpb.Duration{}
+)
 
 type {{.serviceInfo.Name}} struct {
 	uc *biz.{{.appName | Title}}UseCase

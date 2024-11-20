@@ -2,7 +2,9 @@ package server
 
 import (
 	"errors"
+	"net/http/pprof"
 
+	"github.com/ydssx/kratos-kit/common/conf"
 	"github.com/ydssx/kratos-kit/docs"
 	"github.com/ydssx/kratos-kit/internal/middleware"
 	"github.com/ydssx/kratos-kit/internal/service"
@@ -17,7 +19,7 @@ import (
 )
 
 // NewGinServer 创建一个新的 Gin 服务器实例，用于处理不方便通过 proto 定义的接口，如上传接口。
-func NewGinServer(commonSvc *service.CommonService, userSvc *service.UserService, geoip *geoip2.Reader) *gin.Engine {
+func NewGinServer(c *conf.Bootstrap, commonSvc *service.CommonService, userSvc *service.UserService, geoip *geoip2.Reader) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 
 	server := gin.New()
@@ -40,6 +42,20 @@ func NewGinServer(commonSvc *service.CommonService, userSvc *service.UserService
 
 	server.POST("/api/upload", middleware.AuthGin(geoip), commonSvc.Upload)
 	server.GET("/api/users/google-callback", userSvc.GoogleCallback)
+
+	if c.Server.EnablePprof {
+		server.GET("/debug/pprof/", gin.WrapF(pprof.Index))
+		server.GET("/debug/pprof/cmdline", gin.WrapF(pprof.Cmdline))
+		server.GET("/debug/pprof/profile", gin.WrapF(pprof.Profile))
+		server.POST("/debug/pprof/symbol", gin.WrapF(pprof.Symbol))
+		server.GET("/debug/pprof/trace", gin.WrapF(pprof.Trace))
+		server.GET("/debug/pprof/allocs", gin.WrapH(pprof.Handler("allocs")))
+		server.GET("/debug/pprof/block", gin.WrapH(pprof.Handler("block")))
+		server.GET("/debug/pprof/goroutine", gin.WrapH(pprof.Handler("goroutine")))
+		server.GET("/debug/pprof/heap", gin.WrapH(pprof.Handler("heap")))
+		server.GET("/debug/pprof/mutex", gin.WrapH(pprof.Handler("mutex")))
+		server.GET("/debug/pprof/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
+	}
 
 	return server
 }

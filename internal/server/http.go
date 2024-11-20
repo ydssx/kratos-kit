@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	stdhttp "net/http"
-	"net/http/pprof"
 	"time"
 
 	"github.com/fatih/color"
@@ -99,15 +98,7 @@ func registerRoutes(srv *http.Server, ws *common.WsService, userSvc *service.Use
 	registerBasicRoutes(srv, cfg.Username, cfg.Password, c)
 
 	// WebSocket
-	srv.Handle("/ws", stdhttp.HandlerFunc(ws.HandleWebSocket))
-
-	if c.Server.EnablePprof {
-		srv.Handle("/debug/pprof/", stdhttp.HandlerFunc(pprof.Index))
-		srv.Handle("/debug/pprof/cmdline", stdhttp.HandlerFunc(pprof.Cmdline))
-		srv.Handle("/debug/pprof/profile", stdhttp.HandlerFunc(pprof.Profile))
-		srv.Handle("/debug/pprof/symbol", stdhttp.HandlerFunc(pprof.Symbol))
-		srv.Handle("/debug/pprof/trace", stdhttp.HandlerFunc(pprof.Trace))
-	}
+	srv.HandleFunc("/ws", ws.HandleWebSocket)
 
 	// 用户服务
 	userv1.RegisterUserServiceHTTPServer(srv, userSvc)
