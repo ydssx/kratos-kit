@@ -20,19 +20,16 @@ var _ = binding.EncodeURL
 
 const _ = http.SupportPackageIsVersion1
 
-const OperationAIChat = "/api.ai.AI/Chat"
-const OperationAICreateConversation = "/api.ai.AI/CreateConversation"
-const OperationAIDeleteConversation = "/api.ai.AI/DeleteConversation"
-const OperationAIEditImage = "/api.ai.AI/EditImage"
-const OperationAIGenerateImage = "/api.ai.AI/GenerateImage"
-const OperationAIGetConversation = "/api.ai.AI/GetConversation"
-const OperationAIListConversations = "/api.ai.AI/ListConversations"
-const OperationAIListGeneratedImages = "/api.ai.AI/ListGeneratedImages"
-const OperationAIUpdateConversation = "/api.ai.AI/UpdateConversation"
+const OperationAIServiceCreateConversation = "/api.ai.AIService/CreateConversation"
+const OperationAIServiceDeleteConversation = "/api.ai.AIService/DeleteConversation"
+const OperationAIServiceEditImage = "/api.ai.AIService/EditImage"
+const OperationAIServiceGenerateImage = "/api.ai.AIService/GenerateImage"
+const OperationAIServiceGetConversation = "/api.ai.AIService/GetConversation"
+const OperationAIServiceListConversations = "/api.ai.AIService/ListConversations"
+const OperationAIServiceListGeneratedImages = "/api.ai.AIService/ListGeneratedImages"
+const OperationAIServiceUpdateConversation = "/api.ai.AIService/UpdateConversation"
 
-type AIHTTPServer interface {
-	// Chat Chat 与AI助手对话
-	Chat(context.Context, *ChatRequest) (*ChatResponse, error)
+type AIServiceHTTPServer interface {
 	// CreateConversation CreateConversation 创建新的对话
 	CreateConversation(context.Context, *CreateConversationRequest) (*CreateConversationResponse, error)
 	// DeleteConversation DeleteConversation 删除对话
@@ -51,42 +48,19 @@ type AIHTTPServer interface {
 	UpdateConversation(context.Context, *UpdateConversationRequest) (*emptypb.Empty, error)
 }
 
-func RegisterAIHTTPServer(s *http.Server, srv AIHTTPServer) {
+func RegisterAIServiceHTTPServer(s *http.Server, srv AIServiceHTTPServer) {
 	r := s.Route("/")
-	r.POST("/v1/ai/chat", _AI_Chat0_HTTP_Handler(srv))
-	r.POST("/v1/ai/conversations", _AI_CreateConversation0_HTTP_Handler(srv))
-	r.GET("/v1/ai/conversations", _AI_ListConversations0_HTTP_Handler(srv))
-	r.GET("/v1/ai/conversations/{id}", _AI_GetConversation0_HTTP_Handler(srv))
-	r.DELETE("/v1/ai/conversations/{id}", _AI_DeleteConversation0_HTTP_Handler(srv))
-	r.PATCH("/v1/ai/conversations/{id}", _AI_UpdateConversation0_HTTP_Handler(srv))
-	r.POST("/v1/ai/images/generations", _AI_GenerateImage0_HTTP_Handler(srv))
-	r.POST("/v1/ai/images/edits", _AI_EditImage0_HTTP_Handler(srv))
-	r.GET("/v1/ai/images", _AI_ListGeneratedImages0_HTTP_Handler(srv))
+	r.POST("/api/v1/ai/conversations", _AIService_CreateConversation0_HTTP_Handler(srv))
+	r.GET("/api/v1/ai/conversations", _AIService_ListConversations0_HTTP_Handler(srv))
+	r.GET("/v1/ai/conversations/{id}", _AIService_GetConversation0_HTTP_Handler(srv))
+	r.DELETE("/v1/ai/conversations/{id}", _AIService_DeleteConversation0_HTTP_Handler(srv))
+	r.PATCH("/v1/ai/conversations/{id}", _AIService_UpdateConversation0_HTTP_Handler(srv))
+	r.POST("/v1/ai/images/generations", _AIService_GenerateImage0_HTTP_Handler(srv))
+	r.POST("/v1/ai/images/edits", _AIService_EditImage0_HTTP_Handler(srv))
+	r.GET("/v1/ai/images", _AIService_ListGeneratedImages0_HTTP_Handler(srv))
 }
 
-func _AI_Chat0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in ChatRequest
-		if err := ctx.Bind(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAIChat)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.Chat(ctx, req.(*ChatRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*ChatResponse)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _AI_CreateConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error {
+func _AIService_CreateConversation0_HTTP_Handler(srv AIServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in CreateConversationRequest
 		if err := ctx.Bind(&in); err != nil {
@@ -95,7 +69,7 @@ func _AI_CreateConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Contex
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAICreateConversation)
+		http.SetOperation(ctx, OperationAIServiceCreateConversation)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.CreateConversation(ctx, req.(*CreateConversationRequest))
 		})
@@ -108,13 +82,13 @@ func _AI_CreateConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Contex
 	}
 }
 
-func _AI_ListConversations0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error {
+func _AIService_ListConversations0_HTTP_Handler(srv AIServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in ListConversationsRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAIListConversations)
+		http.SetOperation(ctx, OperationAIServiceListConversations)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.ListConversations(ctx, req.(*ListConversationsRequest))
 		})
@@ -127,7 +101,7 @@ func _AI_ListConversations0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context
 	}
 }
 
-func _AI_GetConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error {
+func _AIService_GetConversation0_HTTP_Handler(srv AIServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in GetConversationRequest
 		if err := ctx.BindQuery(&in); err != nil {
@@ -136,7 +110,7 @@ func _AI_GetConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) 
 		if err := ctx.BindVars(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAIGetConversation)
+		http.SetOperation(ctx, OperationAIServiceGetConversation)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.GetConversation(ctx, req.(*GetConversationRequest))
 		})
@@ -149,7 +123,7 @@ func _AI_GetConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) 
 	}
 }
 
-func _AI_DeleteConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error {
+func _AIService_DeleteConversation0_HTTP_Handler(srv AIServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in DeleteConversationRequest
 		if err := ctx.BindQuery(&in); err != nil {
@@ -158,7 +132,7 @@ func _AI_DeleteConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Contex
 		if err := ctx.BindVars(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAIDeleteConversation)
+		http.SetOperation(ctx, OperationAIServiceDeleteConversation)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.DeleteConversation(ctx, req.(*DeleteConversationRequest))
 		})
@@ -171,7 +145,7 @@ func _AI_DeleteConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Contex
 	}
 }
 
-func _AI_UpdateConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error {
+func _AIService_UpdateConversation0_HTTP_Handler(srv AIServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in UpdateConversationRequest
 		if err := ctx.Bind(&in); err != nil {
@@ -183,7 +157,7 @@ func _AI_UpdateConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Contex
 		if err := ctx.BindVars(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAIUpdateConversation)
+		http.SetOperation(ctx, OperationAIServiceUpdateConversation)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.UpdateConversation(ctx, req.(*UpdateConversationRequest))
 		})
@@ -196,7 +170,7 @@ func _AI_UpdateConversation0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Contex
 	}
 }
 
-func _AI_GenerateImage0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error {
+func _AIService_GenerateImage0_HTTP_Handler(srv AIServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in GenerateImageRequest
 		if err := ctx.Bind(&in); err != nil {
@@ -205,7 +179,7 @@ func _AI_GenerateImage0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) er
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAIGenerateImage)
+		http.SetOperation(ctx, OperationAIServiceGenerateImage)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.GenerateImage(ctx, req.(*GenerateImageRequest))
 		})
@@ -218,7 +192,7 @@ func _AI_GenerateImage0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) er
 	}
 }
 
-func _AI_EditImage0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error {
+func _AIService_EditImage0_HTTP_Handler(srv AIServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in EditImageRequest
 		if err := ctx.Bind(&in); err != nil {
@@ -227,7 +201,7 @@ func _AI_EditImage0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error 
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAIEditImage)
+		http.SetOperation(ctx, OperationAIServiceEditImage)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.EditImage(ctx, req.(*EditImageRequest))
 		})
@@ -240,13 +214,13 @@ func _AI_EditImage0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error 
 	}
 }
 
-func _AI_ListGeneratedImages0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Context) error {
+func _AIService_ListGeneratedImages0_HTTP_Handler(srv AIServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in ListGeneratedImagesRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAIListGeneratedImages)
+		http.SetOperation(ctx, OperationAIServiceListGeneratedImages)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.ListGeneratedImages(ctx, req.(*ListGeneratedImagesRequest))
 		})
@@ -259,8 +233,7 @@ func _AI_ListGeneratedImages0_HTTP_Handler(srv AIHTTPServer) func(ctx http.Conte
 	}
 }
 
-type AIHTTPClient interface {
-	Chat(ctx context.Context, req *ChatRequest, opts ...http.CallOption) (rsp *ChatResponse, err error)
+type AIServiceHTTPClient interface {
 	CreateConversation(ctx context.Context, req *CreateConversationRequest, opts ...http.CallOption) (rsp *CreateConversationResponse, err error)
 	DeleteConversation(ctx context.Context, req *DeleteConversationRequest, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
 	EditImage(ctx context.Context, req *EditImageRequest, opts ...http.CallOption) (rsp *GenerateImageResponse, err error)
@@ -271,32 +244,19 @@ type AIHTTPClient interface {
 	UpdateConversation(ctx context.Context, req *UpdateConversationRequest, opts ...http.CallOption) (rsp *emptypb.Empty, err error)
 }
 
-type AIHTTPClientImpl struct {
+type AIServiceHTTPClientImpl struct {
 	cc *http.Client
 }
 
-func NewAIHTTPClient(client *http.Client) AIHTTPClient {
-	return &AIHTTPClientImpl{client}
+func NewAIServiceHTTPClient(client *http.Client) AIServiceHTTPClient {
+	return &AIServiceHTTPClientImpl{client}
 }
 
-func (c *AIHTTPClientImpl) Chat(ctx context.Context, in *ChatRequest, opts ...http.CallOption) (*ChatResponse, error) {
-	var out ChatResponse
-	pattern := "/v1/ai/chat"
-	path := binding.EncodeURL(pattern, in, false)
-	opts = append(opts, http.Operation(OperationAIChat))
-	opts = append(opts, http.PathTemplate(pattern))
-	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *AIHTTPClientImpl) CreateConversation(ctx context.Context, in *CreateConversationRequest, opts ...http.CallOption) (*CreateConversationResponse, error) {
+func (c *AIServiceHTTPClientImpl) CreateConversation(ctx context.Context, in *CreateConversationRequest, opts ...http.CallOption) (*CreateConversationResponse, error) {
 	var out CreateConversationResponse
-	pattern := "/v1/ai/conversations"
+	pattern := "/api/v1/ai/conversations"
 	path := binding.EncodeURL(pattern, in, false)
-	opts = append(opts, http.Operation(OperationAICreateConversation))
+	opts = append(opts, http.Operation(OperationAIServiceCreateConversation))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
@@ -305,11 +265,11 @@ func (c *AIHTTPClientImpl) CreateConversation(ctx context.Context, in *CreateCon
 	return &out, nil
 }
 
-func (c *AIHTTPClientImpl) DeleteConversation(ctx context.Context, in *DeleteConversationRequest, opts ...http.CallOption) (*emptypb.Empty, error) {
+func (c *AIServiceHTTPClientImpl) DeleteConversation(ctx context.Context, in *DeleteConversationRequest, opts ...http.CallOption) (*emptypb.Empty, error) {
 	var out emptypb.Empty
 	pattern := "/v1/ai/conversations/{id}"
 	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationAIDeleteConversation))
+	opts = append(opts, http.Operation(OperationAIServiceDeleteConversation))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
 	if err != nil {
@@ -318,11 +278,11 @@ func (c *AIHTTPClientImpl) DeleteConversation(ctx context.Context, in *DeleteCon
 	return &out, nil
 }
 
-func (c *AIHTTPClientImpl) EditImage(ctx context.Context, in *EditImageRequest, opts ...http.CallOption) (*GenerateImageResponse, error) {
+func (c *AIServiceHTTPClientImpl) EditImage(ctx context.Context, in *EditImageRequest, opts ...http.CallOption) (*GenerateImageResponse, error) {
 	var out GenerateImageResponse
 	pattern := "/v1/ai/images/edits"
 	path := binding.EncodeURL(pattern, in, false)
-	opts = append(opts, http.Operation(OperationAIEditImage))
+	opts = append(opts, http.Operation(OperationAIServiceEditImage))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
@@ -331,11 +291,11 @@ func (c *AIHTTPClientImpl) EditImage(ctx context.Context, in *EditImageRequest, 
 	return &out, nil
 }
 
-func (c *AIHTTPClientImpl) GenerateImage(ctx context.Context, in *GenerateImageRequest, opts ...http.CallOption) (*GenerateImageResponse, error) {
+func (c *AIServiceHTTPClientImpl) GenerateImage(ctx context.Context, in *GenerateImageRequest, opts ...http.CallOption) (*GenerateImageResponse, error) {
 	var out GenerateImageResponse
 	pattern := "/v1/ai/images/generations"
 	path := binding.EncodeURL(pattern, in, false)
-	opts = append(opts, http.Operation(OperationAIGenerateImage))
+	opts = append(opts, http.Operation(OperationAIServiceGenerateImage))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
@@ -344,11 +304,11 @@ func (c *AIHTTPClientImpl) GenerateImage(ctx context.Context, in *GenerateImageR
 	return &out, nil
 }
 
-func (c *AIHTTPClientImpl) GetConversation(ctx context.Context, in *GetConversationRequest, opts ...http.CallOption) (*GetConversationResponse, error) {
+func (c *AIServiceHTTPClientImpl) GetConversation(ctx context.Context, in *GetConversationRequest, opts ...http.CallOption) (*GetConversationResponse, error) {
 	var out GetConversationResponse
 	pattern := "/v1/ai/conversations/{id}"
 	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationAIGetConversation))
+	opts = append(opts, http.Operation(OperationAIServiceGetConversation))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {
@@ -357,11 +317,11 @@ func (c *AIHTTPClientImpl) GetConversation(ctx context.Context, in *GetConversat
 	return &out, nil
 }
 
-func (c *AIHTTPClientImpl) ListConversations(ctx context.Context, in *ListConversationsRequest, opts ...http.CallOption) (*ListConversationsResponse, error) {
+func (c *AIServiceHTTPClientImpl) ListConversations(ctx context.Context, in *ListConversationsRequest, opts ...http.CallOption) (*ListConversationsResponse, error) {
 	var out ListConversationsResponse
-	pattern := "/v1/ai/conversations"
+	pattern := "/api/v1/ai/conversations"
 	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationAIListConversations))
+	opts = append(opts, http.Operation(OperationAIServiceListConversations))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {
@@ -370,11 +330,11 @@ func (c *AIHTTPClientImpl) ListConversations(ctx context.Context, in *ListConver
 	return &out, nil
 }
 
-func (c *AIHTTPClientImpl) ListGeneratedImages(ctx context.Context, in *ListGeneratedImagesRequest, opts ...http.CallOption) (*ListGeneratedImagesResponse, error) {
+func (c *AIServiceHTTPClientImpl) ListGeneratedImages(ctx context.Context, in *ListGeneratedImagesRequest, opts ...http.CallOption) (*ListGeneratedImagesResponse, error) {
 	var out ListGeneratedImagesResponse
 	pattern := "/v1/ai/images"
 	path := binding.EncodeURL(pattern, in, true)
-	opts = append(opts, http.Operation(OperationAIListGeneratedImages))
+	opts = append(opts, http.Operation(OperationAIServiceListGeneratedImages))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {
@@ -383,11 +343,11 @@ func (c *AIHTTPClientImpl) ListGeneratedImages(ctx context.Context, in *ListGene
 	return &out, nil
 }
 
-func (c *AIHTTPClientImpl) UpdateConversation(ctx context.Context, in *UpdateConversationRequest, opts ...http.CallOption) (*emptypb.Empty, error) {
+func (c *AIServiceHTTPClientImpl) UpdateConversation(ctx context.Context, in *UpdateConversationRequest, opts ...http.CallOption) (*emptypb.Empty, error) {
 	var out emptypb.Empty
 	pattern := "/v1/ai/conversations/{id}"
 	path := binding.EncodeURL(pattern, in, false)
-	opts = append(opts, http.Operation(OperationAIUpdateConversation))
+	opts = append(opts, http.Operation(OperationAIServiceUpdateConversation))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
 	if err != nil {

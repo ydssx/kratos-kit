@@ -9,26 +9,26 @@ import "validate/validate.proto";
 option go_package = "github.com/ydssx/kratos-kit/api/ai/v1;aiv1";
 
 // AI服务接口定义
-service AI {
+service AIService {
   // Chat 与AI助手对话
-  rpc Chat(ChatRequest) returns (ChatResponse) {
-    option (google.api.http) = {
-      post: "/v1/ai/chat"
-      body: "*"
-    };
-  }
+  // rpc Chat(ChatRequest) returns (ChatResponse) {
+  //   option (google.api.http) = {
+  //     post: "/api/v1/ai/chat"
+  //     body: "*"
+  //   };
+  // }
 
   // CreateConversation 创建新的对话
   rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse) {
     option (google.api.http) = {
-      post: "/v1/ai/conversations"
+      post: "/api/v1/ai/conversations"
       body: "*"
     };
   }
 
   // ListConversations 获取对话列表
   rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse) {
-    option (google.api.http) = {get: "/v1/ai/conversations"};
+    option (google.api.http) = {get: "/api/v1/ai/conversations"};
   }
 
   // GetConversation 获取对话详情
@@ -74,7 +74,7 @@ service AI {
 // 聊天请求
 message ChatRequest {
   // 对话ID
-  int64 conversation_id = 1 [(validate.rules).int64.gt = 0];
+  int32 conversation_id = 1 [(validate.rules).int32.gt = 0];
   // 用户消息内容
   string content = 2 [(validate.rules).string = {
     min_len: 1
@@ -84,10 +84,10 @@ message ChatRequest {
   string model = 3;
   // 系统提示词，可选
   string system_prompt = 4;
-  // 是否生成图片
-  bool generate_image = 5;
-  // 图片生成参数，当generate_image为true时有效
-  ImageGenerationParams image_params = 6;
+  // // 是否生成图片
+  // bool generate_image = 5;
+  // // 图片生成参数，当generate_image为true时有效
+  // ImageGenerationParams image_params = 6;
 }
 
 // 聊天响应

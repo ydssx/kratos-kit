@@ -17,6 +17,7 @@ import (
 	"github.com/hibiken/asynqmon"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	aiv1 "github.com/ydssx/kratos-kit/api/ai/v1"
 	userv1 "github.com/ydssx/kratos-kit/api/user/v1"
 	"github.com/ydssx/kratos-kit/common"
 	"github.com/ydssx/kratos-kit/common/conf"
@@ -54,12 +55,24 @@ func NewHTTPServer(
 	limiter limit.Limiter,
 	ginServer *gin.Engine,
 	userSvc *service.UserService,
+	aiSvc *service.AIService,
 ) *http.Server {
 	cfg := getHTTPConfig(c)
 	srv := http.NewServer(buildServerOptions(cfg, geoip, limiter)...)
 
-	registerRoutes(srv, ws, userSvc, cfg, c)
+	// 基础路由
+	registerBasicRoutes(srv, cfg.Username, cfg.Password, c)
+
+	// WebSocket
+	srv.HandleFunc("/ws", ws.HandleWebSocket)
+
 	RegisterSSE(ctx, srv)
+
+	// 用户服务
+	userv1.RegisterUserServiceHTTPServer(srv, userSvc)
+	// AI服务
+	aiv1.RegisterAIServiceHTTPServer(srv, aiSvc)
+
 	logRoutes(srv)
 
 	srv.HandlePrefix("/", ginServer)
@@ -75,7 +88,7 @@ func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter limi
 			middleware.RateLimit(limiter),
 			middleware.Validator(),
 			middleware.TraceServer(),
-			selector.Server(middleware.AuthServer(geoip)).Match(newWhiteListMatcher()).Build(),
+			// selector.Server(middleware.AuthServer(geoip)).Match(newWhiteListMatcher()).Build(),
 			middleware.LanguageMiddleware(),
 		),
 		http.ResponseEncoder(CustomizeResponseEncoder),
@@ -90,18 +103,6 @@ func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter limi
 	}
 
 	return opts
-}
-
-// registerRoutes 注册路由
-func registerRoutes(srv *http.Server, ws *common.WsService, userSvc *service.UserService, cfg HTTPServerConfig, c *conf.Bootstrap) {
-	// 基础路由
-	registerBasicRoutes(srv, cfg.Username, cfg.Password, c)
-
-	// WebSocket
-	srv.HandleFunc("/ws", ws.HandleWebSocket)
-
-	// 用户服务
-	userv1.RegisterUserServiceHTTPServer(srv, userSvc)
 }
 
 // registerBasicRoutes 注册基础路由

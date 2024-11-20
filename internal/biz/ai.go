@@ -2,9 +2,15 @@ package biz
 
 import (
 	"context"
+	"fmt"
+	"sync"
 
+	"github.com/gin-gonic/gin"
 	apiai "github.com/ydssx/kratos-kit/api/ai/v1"
+	"github.com/ydssx/kratos-kit/pkg/logger"
 
+	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/ollama"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -17,19 +23,77 @@ var (
 	_ = durationpb.Duration{}
 )
 
-type AiUseCase struct{}
+type AiUseCase struct {
+	llmModels map[string]llms.Model
+	mu        sync.Mutex
+}
 
 func NewAiUseCase() *AiUseCase {
-	return &AiUseCase{}
+	return &AiUseCase{llmModels: map[string]llms.Model{}}
 }
 
 // Chat Chat 与AI助手对话
-func (uc *AiUseCase) Chat(ctx context.Context, req *apiai.ChatRequest) (res *apiai.ChatResponse, err error) {
-	res = new(apiai.ChatResponse)
+func (uc *AiUseCase) Chat(ctx *gin.Context, req *apiai.ChatRequest) (res *apiai.ChatResponse, err error) {
+	// 设置SSE响应头
+	ctx.Writer.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	ctx.Writer.Header().Set("Cache-Control", "no-cache")
+	ctx.Writer.Header().Set("Connection", "keep-alive")
+	ctx.Writer.Header().Set("Transfer-Encoding", "chunked")
 
-	// TODO:ADD logic here and delete this line.
+	// 创建一个channel用于检测客户端断开连接
+	clientGone := ctx.Writer.CloseNotify()
 
-	return
+	err = uc.initLLMModels(ctx, req.Model)
+	if err != nil {
+		return nil, err
+	}
+
+	content := []llms.MessageContent{
+		llms.TextParts(llms.ChatMessageTypeHuman, req.Content),
+	}
+
+	completion, err := uc.llmModels[req.Model].GenerateContent(ctx, content, llms.WithStreamingFunc(func(_ context.Context, chunk []byte) error {
+		select {
+		case <-clientGone:
+			return fmt.Errorf("client disconnected")
+		default:
+			// 发送SSE格式的数据
+			_, err := fmt.Fprintf(ctx.Writer, "data: %s\n\n", chunk)
+			ctx.Writer.Flush()
+			return err
+		}
+	}))
+	if err != nil {
+		return nil, err
+	}
+
+	res = &apiai.ChatResponse{
+		Message: &apiai.Message{
+			Content: completion.Choices[0].Content,
+		},
+	}
+
+	return res, nil
+}
+
+// initLLMModels 初始化LLM模型
+func (uc *AiUseCase) initLLMModels(ctx context.Context, model string) error {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+
+	if _, ok := uc.llmModels[model]; ok {
+		return nil
+	}
+
+	llm, err := ollama.New(ollama.WithModel(model), ollama.WithSystemPrompt("You are a helpful assistant and answer questions in Chinese."))
+	if err != nil {
+		logger.Errorf(ctx, "Failed to create LLM model: %v", err)
+		return err
+	}
+
+	uc.llmModels[model] = llm
+
+	return nil
 }
 
 // CreateConversation CreateConversation 创建新的对话

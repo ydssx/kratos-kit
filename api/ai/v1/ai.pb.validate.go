@@ -83,37 +83,6 @@ func (m *ChatRequest) validate(all bool) error {
 
 	// no validation rules for SystemPrompt
 
-	// no validation rules for GenerateImage
-
-	if all {
-		switch v := interface{}(m.GetImageParams()).(type) {
-		case interface{ ValidateAll() error }:
-			if err := v.ValidateAll(); err != nil {
-				errors = append(errors, ChatRequestValidationError{
-					field:  "ImageParams",
-					reason: "embedded message failed validation",
-					cause:  err,
-				})
-			}
-		case interface{ Validate() error }:
-			if err := v.Validate(); err != nil {
-				errors = append(errors, ChatRequestValidationError{
-					field:  "ImageParams",
-					reason: "embedded message failed validation",
-					cause:  err,
-				})
-			}
-		}
-	} else if v, ok := interface{}(m.GetImageParams()).(interface{ Validate() error }); ok {
-		if err := v.Validate(); err != nil {
-			return ChatRequestValidationError{
-				field:  "ImageParams",
-				reason: "embedded message failed validation",
-				cause:  err,
-			}
-		}
-	}
-
 	if len(errors) > 0 {
 		return ChatRequestMultiError(errors)
 	}

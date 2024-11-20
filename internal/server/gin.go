@@ -19,7 +19,13 @@ import (
 )
 
 // NewGinServer 创建一个新的 Gin 服务器实例，用于处理不方便通过 proto 定义的接口，如上传接口。
-func NewGinServer(c *conf.Bootstrap, commonSvc *service.CommonService, userSvc *service.UserService, geoip *geoip2.Reader) *gin.Engine {
+func NewGinServer(
+	c *conf.Bootstrap,
+	geoip *geoip2.Reader,
+	commonSvc *service.CommonService,
+	userSvc *service.UserService,
+	aiSvc *service.AIService,
+) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 
 	server := gin.New()
@@ -39,10 +45,6 @@ func NewGinServer(c *conf.Bootstrap, commonSvc *service.CommonService, userSvc *
 	// Add a GET route for the Swagger UI
 	// The Swagger UI is accessible at http://localhost:9000/swagger/index.html
 	server.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/docs")))
-
-	server.POST("/api/upload", middleware.AuthGin(geoip), commonSvc.Upload)
-	server.GET("/api/users/google-callback", userSvc.GoogleCallback)
-
 	if c.Server.EnablePprof {
 		server.GET("/debug/pprof/", gin.WrapF(pprof.Index))
 		server.GET("/debug/pprof/cmdline", gin.WrapF(pprof.Cmdline))
@@ -56,6 +58,10 @@ func NewGinServer(c *conf.Bootstrap, commonSvc *service.CommonService, userSvc *
 		server.GET("/debug/pprof/mutex", gin.WrapH(pprof.Handler("mutex")))
 		server.GET("/debug/pprof/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
 	}
+
+	server.POST("/api/upload", middleware.AuthGin(geoip), commonSvc.Upload)
+	server.GET("/api/users/google-callback", userSvc.GoogleCallback)
+	server.Any("/api/v1/ai/chat", aiSvc.Chat)
 
 	return server
 }

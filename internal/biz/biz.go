@@ -25,6 +25,7 @@ var ProviderSet = wire.NewSet(
 	NewUploadUseCase,
 	NewCommonUseCase,
 	NewAdminUseCase,
+	NewAiUseCase,
 )
 
 type UsecaseSet struct {
