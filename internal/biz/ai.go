@@ -9,8 +9,10 @@ import (
 	apiai "github.com/ydssx/kratos-kit/api/ai/v1"
 	"github.com/ydssx/kratos-kit/pkg/logger"
 
+	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/ollama"
+	"github.com/tmc/langchaingo/prompts"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -26,10 +28,11 @@ var (
 type AiUseCase struct {
 	llmModels map[string]llms.Model
 	mu        sync.Mutex
+	llmChains map[string]*chains.LLMChain
 }
 
 func NewAiUseCase() *AiUseCase {
-	return &AiUseCase{llmModels: map[string]llms.Model{}}
+	return &AiUseCase{llmModels: map[string]llms.Model{}, llmChains: map[string]*chains.LLMChain{}}
 }
 
 // Chat Chat 与AI助手对话
@@ -48,11 +51,13 @@ func (uc *AiUseCase) Chat(ctx *gin.Context, req *apiai.ChatRequest) (res *apiai.
 		return nil, err
 	}
 
-	content := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeHuman, req.Content),
-	}
+	// content := []llms.MessageContent{
+	// 	llms.TextParts(llms.ChatMessageTypeHuman, req.Content),
+	// }
+	// memoryVariables, _ := uc.llmChains[req.Model].GetMemory().LoadMemoryVariables(ctx, map[string]any{})
+	// logger.Infof(ctx, "memoryVariables: %v", memoryVariables)
 
-	completion, err := uc.llmModels[req.Model].GenerateContent(ctx, content, llms.WithStreamingFunc(func(_ context.Context, chunk []byte) error {
+	completion, err := chains.Run(ctx, uc.llmChains[req.Model], req.Content, chains.WithStreamingFunc(func(_ context.Context, chunk []byte) error {
 		select {
 		case <-clientGone:
 			return fmt.Errorf("client disconnected")
@@ -69,7 +74,7 @@ func (uc *AiUseCase) Chat(ctx *gin.Context, req *apiai.ChatRequest) (res *apiai.
 
 	res = &apiai.ChatResponse{
 		Message: &apiai.Message{
-			Content: completion.Choices[0].Content,
+			Content: completion,
 		},
 	}
 
@@ -84,14 +89,23 @@ func (uc *AiUseCase) initLLMModels(ctx context.Context, model string) error {
 	if _, ok := uc.llmModels[model]; ok {
 		return nil
 	}
+	if _, ok := uc.llmChains[model]; ok {
+		return nil
+	}
 
 	llm, err := ollama.New(ollama.WithModel(model), ollama.WithSystemPrompt("You are a helpful assistant and answer questions in Chinese."))
 	if err != nil {
 		logger.Errorf(ctx, "Failed to create LLM model: %v", err)
 		return err
 	}
-
 	uc.llmModels[model] = llm
+
+	// buffer := memory.NewConversationBuffer()
+	prompt := prompts.NewChatPromptTemplate([]prompts.MessageFormatter{
+		prompts.NewSystemMessagePromptTemplate("Translate {{.input}} to Chinese. Only give the translation, no other information. If can't translate, just return the original text.", []string{"input"}),
+	})
+	llmchain := chains.NewLLMChain(uc.llmModels[model], prompt)
+	uc.llmChains[model] = llmchain
 
 	return nil
 }

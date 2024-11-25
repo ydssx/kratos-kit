@@ -1,8 +1,99 @@
-.vscode
-.idea
-logs
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Binaries
 bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with 'go test -c'
+*.test
+
+# Output of the go coverage tool
+*.out
+*.prof
+coverage.html
+
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
+.glide/
+
+# Dependency directories (remove the comment below to include it)
+vendor/
+
+# Go workspace file
+go.work
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.log
+
+# Local development
+*.env
 *.local.yaml
+.env.local
+.env.*.local
+configs/config.local.yaml
 configs/config.test.yaml
-tmp
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build
+dist/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Debug
+.debug/
+debug.test
+
+# Air - Live reload for Go apps
+.air/
+.air.toml
+tmp/
+
+# Swagger
+api/swagger/
+
+# Custom
 .aider*
+__debug_bin
+.history/
+.env

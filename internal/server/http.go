@@ -88,7 +88,7 @@ func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter limi
 			middleware.RateLimit(limiter),
 			middleware.Validator(),
 			middleware.TraceServer(),
-			// selector.Server(middleware.AuthServer(geoip)).Match(newWhiteListMatcher()).Build(),
+			selector.Server(middleware.AuthServer(geoip)).Match(newWhiteListMatcher()).Build(),
 			middleware.LanguageMiddleware(),
 		),
 		http.ResponseEncoder(CustomizeResponseEncoder),
