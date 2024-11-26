@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	apiai "github.com/ydssx/kratos-kit/api/ai/v1"
@@ -39,6 +40,7 @@ func (s *AIService) Chat(ctx *gin.Context) {
 	// }
 	req.Model = "llama3.2:3b"
 	req.Content = ctx.Query("message")
+	req.Content, _ = url.QueryUnescape(req.Content)
 	_, err := s.uc.Chat(ctx, req)
 	if err != nil {
 		util.FailWithError(ctx, err)

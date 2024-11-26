@@ -69,6 +69,14 @@ service AIService {
   rpc ListGeneratedImages(ListGeneratedImagesRequest) returns (ListGeneratedImagesResponse) {
     option (google.api.http) = {get: "/v1/ai/images"};
   }
+
+  // Summarize 总结文本
+  rpc Summarize(SummarizeRequest) returns (SummarizeResponse) {
+    option (google.api.http) = {
+      post: "/v1/ai/summarize"
+      body: "*"
+    };
+  }
 }
 
 // 聊天请求
@@ -359,4 +367,16 @@ message ImageGenerationParams {
     gte: 1
     lte: 4
   }];
+}
+
+// 总结文本请求
+message SummarizeRequest {
+  // 文本内容
+  string text = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+// 总结文本响应
+message SummarizeResponse {
+  // 总结后的文本
+  string summary = 1;
 }

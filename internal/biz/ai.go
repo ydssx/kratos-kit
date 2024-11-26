@@ -6,13 +6,12 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	apiai "github.com/ydssx/kratos-kit/api/ai/v1"
-	"github.com/ydssx/kratos-kit/pkg/logger"
-
 	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/tmc/langchaingo/prompts"
+	apiai "github.com/ydssx/kratos-kit/api/ai/v1"
+	"github.com/ydssx/kratos-kit/pkg/logger"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -93,18 +92,28 @@ func (uc *AiUseCase) initLLMModels(ctx context.Context, model string) error {
 		return nil
 	}
 
-	llm, err := ollama.New(ollama.WithModel(model), ollama.WithSystemPrompt("You are a helpful assistant and answer questions in Chinese."))
+	// 创建模型实例
+	llm, err := ollama.New(
+		ollama.WithModel(model),
+		ollama.WithSystemPrompt(`You are a helpful AI assistant. Please follow these guidelines:
+1. Provide accurate and helpful information
+2. If you're not sure about something, admit it
+3. Keep responses concise but complete
+4. Be polite and professional
+5. Respect user privacy and security
+6. Answer in the same language as the user's question`),
+	)
 	if err != nil {
 		logger.Errorf(ctx, "Failed to create LLM model: %v", err)
-		return err
+		return fmt.Errorf("failed to create model instance: %v", err)
 	}
 	uc.llmModels[model] = llm
 
-	// buffer := memory.NewConversationBuffer()
+	// 创建对话链
 	prompt := prompts.NewChatPromptTemplate([]prompts.MessageFormatter{
-		prompts.NewSystemMessagePromptTemplate("Translate {{.input}} to Chinese. Only give the translation, no other information. If can't translate, just return the original text.", []string{"input"}),
+		prompts.NewSystemMessagePromptTemplate("You are a helpful AI assistant. Please provide accurate and helpful information. The user's input is: {{.input}}.", []string{"input"}),
 	})
-	llmchain := chains.NewLLMChain(uc.llmModels[model], prompt)
+	llmchain := chains.NewLLMChain(llm, prompt)
 	uc.llmChains[model] = llmchain
 
 	return nil
