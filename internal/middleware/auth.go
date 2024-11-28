@@ -61,7 +61,6 @@ func handleTransportAuth(tr transport.Transporter) (*jwt.Claims, error) {
 	}
 	return &jwt.Claims{
 		Uid:  int64(user.ID),
-		Type: user.Type,
 	}, nil
 }
 
@@ -170,7 +169,6 @@ func buildClaims(user *models.User, clientIP string) *jwt.Claims {
 	return &jwt.Claims{
 		Uid:         int64(user.ID),
 		ClientIP:    clientIP,
-		Type:        user.Type,
 		CountryCode: user.CountryCode,
 		Country:     user.CountryName,
 		City:        user.CityCode,
@@ -250,7 +248,6 @@ func AuthAdmin() middleware.Middleware {
 
 			ctx = NewContext(ctx, &jwt.Claims{
 				Uid:  int64(user.ID),
-				Type: user.Type,
 			})
 			return h(ctx, req)
 		}
@@ -267,7 +264,6 @@ func AuthGin(geoip *geoip2.Reader) gin.HandlerFunc {
 			return
 		}
 		c.Set("user_id", int(claims.Uid))
-		c.Set("user_type", int(claims.Type))
 		c.Next()
 	}
 }

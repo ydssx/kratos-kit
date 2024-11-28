@@ -1,19 +1,22 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	stdhttp "net/http"
+	"log"
+	"net/http"
+	"strings"
+	"text/tabwriter"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"
 	"github.com/go-kratos/kratos/v2/encoding"
 	kerrors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	"github.com/go-kratos/kratos/v2/middleware/selector"
-	"github.com/go-kratos/kratos/v2/transport/http"
+	khttp "github.com/go-kratos/kratos/v2/transport/http"
 	"github.com/hibiken/asynqmon"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -56,9 +59,9 @@ func NewHTTPServer(
 	ginServer *gin.Engine,
 	userSvc *service.UserService,
 	aiSvc *service.AIService,
-) *http.Server {
+) *khttp.Server {
 	cfg := getHTTPConfig(c)
-	srv := http.NewServer(buildServerOptions(cfg, geoip, limiter)...)
+	srv := khttp.NewServer(buildServerOptions(cfg, geoip, limiter)...)
 
 	// 基础路由
 	registerBasicRoutes(srv, cfg.Username, cfg.Password, c)
@@ -81,9 +84,9 @@ func NewHTTPServer(
 }
 
 // buildServerOptions 构建服务器选项
-func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter limit.Limiter) []http.ServerOption {
-	opts := []http.ServerOption{
-		http.Middleware(
+func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter limit.Limiter) []khttp.ServerOption {
+	opts := []khttp.ServerOption{
+		khttp.Middleware(
 			recovery.Recovery(),
 			middleware.RateLimit(limiter),
 			middleware.Validator(),
@@ -91,22 +94,22 @@ func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter limi
 			selector.Server(middleware.AuthServer(geoip)).Match(newWhiteListMatcher()).Build(),
 			middleware.LanguageMiddleware(),
 		),
-		http.ResponseEncoder(CustomizeResponseEncoder),
-		http.ErrorEncoder(CustomizeErrorEncoder),
+		khttp.ResponseEncoder(CustomizeResponseEncoder),
+		khttp.ErrorEncoder(CustomizeErrorEncoder),
 	}
 
 	if cfg.Addr != "" {
-		opts = append(opts, http.Address(cfg.Addr))
+		opts = append(opts, khttp.Address(cfg.Addr))
 	}
 	if cfg.Timeout > 0 {
-		opts = append(opts, http.Timeout(cfg.Timeout))
+		opts = append(opts, khttp.Timeout(cfg.Timeout))
 	}
 
 	return opts
 }
 
 // registerBasicRoutes 注册基础路由
-func registerBasicRoutes(srv *http.Server, username, password string, c *conf.Bootstrap) {
+func registerBasicRoutes(srv *khttp.Server, username, password string, c *conf.Bootstrap) {
 	// 健康检查
 	srv.HandleFunc("/health", healthCheck)
 	// Prometheus 指标
@@ -120,8 +123,8 @@ func registerBasicRoutes(srv *http.Server, username, password string, c *conf.Bo
 }
 
 // healthCheck 健康检查处理器
-func healthCheck(w stdhttp.ResponseWriter, _ *stdhttp.Request) {
-	w.WriteHeader(stdhttp.StatusOK)
+func healthCheck(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok"))
 }
 
@@ -146,12 +149,12 @@ func CustomizeErrorEncoder(w http.ResponseWriter, r *http.Request, err error) {
 	resp := buildErrorResponse(err)
 	body, err := encoding.GetCodec("json").Marshal(resp)
 	if err != nil {
-		w.WriteHeader(stdhttp.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", jsonContentType)
-	w.WriteHeader(stdhttp.StatusOK)
+	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }
 
@@ -233,12 +236,12 @@ func writeJSON(w http.ResponseWriter, v interface{}) error {
 }
 
 // BasicAuth 基本认证中间件
-func BasicAuth(username, password string, next stdhttp.Handler) stdhttp.Handler {
-	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+func BasicAuth(username, password string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, pass, ok := r.BasicAuth()
 		if !ok || user != username || pass != password {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-			w.WriteHeader(stdhttp.StatusUnauthorized)
+			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte(unauthorized))
 			return
 		}
@@ -259,11 +262,40 @@ func newWhiteListMatcher() selector.MatchFunc {
 }
 
 // logRoutes 记录所有路由
-func logRoutes(srv *http.Server) {
-	srv.WalkRoute(func(info http.RouteInfo) error {
-		fmt.Printf("Route: [%s] %s\n", color.CyanString(info.Method), color.GreenString(info.Path))
+func logRoutes(srv *khttp.Server) {
+	var routes []string
+	maxMethod := 0
+	maxPath := 0
+
+	// 收集路由信息并计算最大长度
+	if err := srv.WalkRoute(func(info khttp.RouteInfo) error {
+		method := info.Method
+		path := info.Path
+		if len(method) > maxMethod {
+			maxMethod = len(method)
+		}
+		if len(path) > maxPath {
+			maxPath = len(path)
+		}
+		routes = append(routes, fmt.Sprintf("%s\t%s", method, path))
 		return nil
-	})
+	}); err != nil {
+		log.Printf("Error walking routes: %v", err)
+		return
+	}
+
+	// 创建格式化的输出
+	var b bytes.Buffer
+	w := tabwriter.NewWriter(&b, 0, 0, 2, ' ', tabwriter.TabIndent)
+	fmt.Fprintln(w, "Method\tPath")
+	fmt.Fprintln(w, strings.Repeat("-", maxMethod)+"\t"+strings.Repeat("-", maxPath))
+	for _, route := range routes {
+		fmt.Fprintln(w, route)
+	}
+	w.Flush()
+
+	// 打印路由表
+	log.Printf("\nRegistered HTTP routes:\n\n%s\n", b.String())
 }
 
 // getHTTPConfig 获取HTTP配置
@@ -281,7 +313,7 @@ func getHTTPConfig(c *conf.Bootstrap) HTTPServerConfig {
 }
 
 // RegisterSSE 注册 SSE 端点
-func RegisterSSE(ctx context.Context, srv *http.Server) {
+func RegisterSSE(ctx context.Context, srv *khttp.Server) {
 	broker := sse.NewBroker()
 	broker.Start(ctx)
 
