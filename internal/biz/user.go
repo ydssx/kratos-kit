@@ -28,36 +28,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// UserRepo 是用户仓库接口
-type UserRepo interface {
-	// CreateUser 创建用户
-	CreateUser(ctx context.Context, user *models.User) (userId int, err error)
-	// UpdateUser 更新用户
-	UpdateUser(ctx context.Context, userId int, user interface{}) error
-	// UpdateUserByID 根据ID更新用户
-	UpdateUserByID(ctx context.Context, uid int, user *models.User) error
-	// ListUser 获取用户列表
-	ListUser(ctx context.Context, cond *ListUserCond) []models.User
-	// GetUserByID 根据用户ID获取用户
-	GetUserByID(ctx context.Context, id uint) (*models.User, error)
-	// GetUserByUUID 根据用户UUID获取用户
-	GetUserByUUID(ctx context.Context, uuid string) (*models.User, error)
-	// GetUserByEmail 根据邮箱名获取用户
-	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	// GetUserByBrowserFingerprint 根据指纹获取用户
-	GetUserByBrowserFingerprint(ctx context.Context, fingerprint string) (*models.User, error)
-	// GetUserByGoogleID 根据Google ID获取用户
-	GetUserByGoogleID(ctx context.Context, googleID string) (*models.User, error)
-}
-
-type (
-	ListUserCond struct {
-		Type *models.UserType
-		// 积分数大于
-		PointsGt int64
-	}
-)
-
 type UserUseCase struct {
 	repo              UserRepo
 	log               *log.Helper

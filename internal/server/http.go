@@ -130,6 +130,11 @@ func healthCheck(w http.ResponseWriter, _ *http.Request) {
 
 // CustomizeResponseEncoder 自定义响应编码器
 func CustomizeResponseEncoder(w http.ResponseWriter, r *http.Request, v interface{}) error {
+	if rd, ok := v.(khttp.Redirector); ok {
+		url, code := rd.Redirect()
+		http.Redirect(w, r, url, code)
+		return nil
+	}
 	data, err := marshalResponse(v)
 	if err != nil {
 		return fmt.Errorf("marshal response failed: %w", err)
