@@ -96,6 +96,7 @@ func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter limi
 		),
 		khttp.ResponseEncoder(CustomizeResponseEncoder),
 		khttp.ErrorEncoder(CustomizeErrorEncoder),
+		khttp.Filter(middleware.CORS()),
 	}
 
 	if cfg.Addr != "" {
