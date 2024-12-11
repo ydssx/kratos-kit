@@ -20,7 +20,6 @@ import (
 	"github.com/hibiken/asynqmon"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	aiv1 "github.com/ydssx/kratos-kit/api/ai/v1"
 	userv1 "github.com/ydssx/kratos-kit/api/user/v1"
 	"github.com/ydssx/kratos-kit/common"
 	"github.com/ydssx/kratos-kit/common/conf"
@@ -58,7 +57,6 @@ func NewHTTPServer(
 	limiter limit.Limiter,
 	ginServer *gin.Engine,
 	userSvc *service.UserService,
-	aiSvc *service.AIService,
 ) *khttp.Server {
 	cfg := getHTTPConfig(c)
 	srv := khttp.NewServer(buildServerOptions(cfg, geoip, limiter)...)
@@ -73,8 +71,6 @@ func NewHTTPServer(
 
 	// 用户服务
 	userv1.RegisterUserServiceHTTPServer(srv, userSvc)
-	// AI服务
-	aiv1.RegisterAIServiceHTTPServer(srv, aiSvc)
 
 	logRoutes(srv)
 

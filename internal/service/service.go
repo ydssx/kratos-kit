@@ -9,5 +9,4 @@ var ProviderSet = wire.NewSet(
 	NewUserService,
 	NewCommonService,
 	NewAdminService,
-	NewAIService,
 )

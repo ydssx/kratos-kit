@@ -48,6 +48,9 @@ func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, exp
 	}
 
 	randomExpire := expire + time.Duration(rand.Int63n(int64(time.Second)))
+	if expire == 0 {
+		randomExpire = 0
+	}
 
 	err = c.client.Set(ctx, cachePrefix+key, string(data), randomExpire).Err()
 	if err != nil {

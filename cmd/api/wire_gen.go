@@ -27,23 +27,20 @@ import (
 // wireApp init kratos application.
 func wireApp(ctx context.Context, c *conf.Bootstrap, logger log.Logger) (*kratos.App, func(), error) {
 	wsService := common.NewWsService(ctx, logger)
-	reader, cleanup := common.NewGeoipDB(c)
+	reader := common.NewGeoipDB(ctx, c)
 	client, err := common.NewRedisCLient(c)
 	if err != nil {
-		cleanup()
 		return nil, nil, err
 	}
 	redisLimiter := common.NewRateLimiter(client)
-	googleCloudStorage, cleanup2 := common.NewGoogleCloudStorage(c)
+	googleCloudStorage, cleanup := common.NewGoogleCloudStorage(c)
 	db, err := common.NewMysqlDB(c)
 	if err != nil {
-		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	dataData, cleanup3, err := data.NewData(logger, client, db)
+	dataData, err := data.NewData(ctx, logger, client, db)
 	if err != nil {
-		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
@@ -59,18 +56,14 @@ func wireApp(ctx context.Context, c *conf.Bootstrap, logger log.Logger) (*kratos
 	email := common.NewEmail(c)
 	userUseCase := biz.NewUserUseCase(bizUserRepo, logger, transaction, commonUseCase, redisLocker, config, cache, email)
 	userService := service.NewUserService(userUseCase)
-	aiUseCase := biz.NewAiUseCase()
-	aiService := service.NewAIService(aiUseCase)
-	engine := server.NewGinServer(c, reader, commonService, userService, aiService)
-	httpServer := server.NewHTTPServer(ctx, c, wsService, reader, redisLimiter, engine, userService, aiService)
+	engine := server.NewGinMux(c, reader, commonService, userService)
+	httpServer := server.NewHTTPServer(ctx, c, wsService, reader, redisLimiter, engine, userService)
 	usecaseSet := biz.NewUsecaseSet(userUseCase, uploadUseCase)
 	jobServer := server.NewJobServer(c, usecaseSet)
 	grpcServer := server.NewGRPCServer(c, reader)
 	v := server.NewServer(httpServer, jobServer, grpcServer)
 	app := newApp(ctx, c, v...)
 	return app, func() {
-		cleanup3()
-		cleanup2()
 		cleanup()
 	}, nil
 }

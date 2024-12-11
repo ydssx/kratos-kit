@@ -24,7 +24,6 @@ func NewGinMux(
 	geoip *geoip2.Reader,
 	commonSvc *service.CommonService,
 	userSvc *service.UserService,
-	aiSvc *service.AIService,
 ) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 
@@ -61,7 +60,6 @@ func NewGinMux(
 
 	mux.POST("/api/upload", middleware.AuthGin(geoip), commonSvc.Upload)
 	mux.GET("/api/users/google-callback", userSvc.GoogleCallback)
-	mux.Any("/api/v1/ai/chat", aiSvc.Chat)
 
 	return mux
 }

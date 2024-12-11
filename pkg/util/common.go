@@ -431,11 +431,8 @@ func Timer[T any, R any](f func(T) R) func(T) R {
 	}
 }
 
-// 定义一个类型，用于表示无参无返回值的函数
-type Function func()
-
 // MeasureTime 用于测量函数的运行时间
-func MeasureTime(fn Function) time.Duration {
+func MeasureTime(fn func()) time.Duration {
 	start := time.Now()          // 获取当前时间
 	fn()                         // 执行传入的函数
 	elapsed := time.Since(start) // 计算运行时间

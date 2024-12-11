@@ -49,14 +49,14 @@ func NewClientSet(ctx context.Context) *ClientSet {
 		panic(fmt.Sprintf("failed to dial server: %v", err))
 	}
 
-	return &ClientSet{conn}
-}
+	context.AfterFunc(ctx, func() {
+		err := conn.Close()
+		if err != nil {
+			slog.Error("failed to close conn to %s: %v", conn.Target(), err)
+		}
+	})
 
-func (c *ClientSet) Close() {
-	err := c.conn.Close()
-	if err != nil {
-		slog.Error("failed to close conn to %s: %v", c.conn.Target(), err)
-	}
+	return &ClientSet{conn}
 }
 
 func authClient(tokenStr string) middleware.Middleware {

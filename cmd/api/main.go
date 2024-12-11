@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"time"
 
 	"github.com/ydssx/kratos-kit/common"
 	"github.com/ydssx/kratos-kit/common/conf"
@@ -32,7 +33,10 @@ func main() {
 	common.SetEnv(&config)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	defer func() {
+		cancel()
+		time.Sleep(time.Millisecond * 10)
+	}()
 
 	application, cleanup, err := wireApp(ctx, &config, logger.DefaultLogger)
 	if err != nil {

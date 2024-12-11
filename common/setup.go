@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"os"
 	"sync"
 
@@ -123,14 +124,20 @@ func NewGoogleCloudStorage(c *conf.Bootstrap) (*storage.GoogleCloudStorage, func
 }
 
 // NewGeoipDB returns a new GeoipDB.
-func NewGeoipDB(c *conf.Bootstrap) (*geoip2.Reader, func()) {
+func NewGeoipDB(ctx context.Context, c *conf.Bootstrap) *geoip2.Reader {
 	db, err := geoip2.Open(c.Data.Geoip.Path)
 	if err != nil {
 		log.Fatal("failed to open GeoIP database: ", err)
 	}
-	return db, func() {
-		db.Close()
-	}
+
+	context.AfterFunc(ctx, func() {
+		err := db.Close()
+		if err != nil {
+			log.Error("failed to close GeoIP database: ", err)
+		}
+	})
+
+	return db
 }
 
 func NewRateLimiter(rdb *goredis.Client) *limit.RedisLimiter {

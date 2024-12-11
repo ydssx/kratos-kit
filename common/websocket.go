@@ -44,7 +44,7 @@ func NewWsService(ctx context.Context, logger log.Logger) *WsService {
 		stop: make(chan struct{}),
 	}
 	go ws.writePump()
-	go ws.gracefulShutdown(ctx)
+	ws.gracefulShutdown(ctx)
 
 	return ws
 }
@@ -183,15 +183,16 @@ func (ws *WsService) broadcastMessage(message []byte) {
 }
 
 func (ws *WsService) gracefulShutdown(ctx context.Context) {
-	<-ctx.Done()
-	close(ws.stop)
-	ws.conns.Range(func(_, value interface{}) bool {
-		client := value.(*websocket.Conn)
-		closeMsg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "服务正在关闭")
-		_ = client.WriteControl(websocket.CloseMessage, closeMsg, time.Now().Add(writeWait))
-		_ = client.Close()
-		return true
+	context.AfterFunc(ctx, func() {
+		close(ws.stop)
+		ws.conns.Range(func(_, value interface{}) bool {
+			client := value.(*websocket.Conn)
+			closeMsg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "服务正在关闭")
+			_ = client.WriteControl(websocket.CloseMessage, closeMsg, time.Now().Add(writeWait))
+			_ = client.Close()
+			return true
+		})
+		close(ws.send)
+		ws.logger.Info("WebSocket 服务已完全关闭")
 	})
-	close(ws.send)
-	ws.logger.Info("WebSocket 服务已完全关闭")
 }
