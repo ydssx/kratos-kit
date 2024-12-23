@@ -47,7 +47,7 @@ func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, exp
 		return errors.Wrap(err, "marshal value error")
 	}
 
-	randomExpire := expire + time.Duration(rand.Int63n(int64(time.Second)))
+	randomExpire := expire + time.Duration(rand.Int63n(int64(expire/10)))
 	if expire == 0 {
 		randomExpire = 0
 	}
