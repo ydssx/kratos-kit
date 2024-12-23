@@ -1,0 +1,315 @@
+syntax = "proto3";
+
+package klingai;
+
+import "google/api/annotations.proto";
+import "validate/validate.proto";
+
+option go_package = "third_party/klingai;klingai";
+
+// 图像生成服务
+service ImageGenerationService {
+  // 创建图像生成任务
+  rpc CreateImageTask(CreateImageTaskRequest) returns (CreateImageTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/images/generations"
+      body: "*"
+    };
+  }
+  // 查询单个任务
+  rpc GetImageTask(GetImageTaskRequest) returns (GetImageTaskResponse) {
+    option (google.api.http) = {get: "/v1/images/generations/{task_id}"};
+  }
+  // 查询任务列表
+  rpc ListImageTasks(ListImageTasksRequest) returns (ListImageTasksResponse) {
+    option (google.api.http) = {get: "/v1/images/generations"};
+  }
+}
+
+// 视频生成服务
+service VideoGenerationService {
+  //   // 文生视频任务
+  rpc CreateText2VideoTask(CreateText2VideoTaskRequest) returns (CreateText2VideoTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/videos/generations"
+      body: "*"
+    };
+  }
+  rpc GetText2VideoTask(GetText2VideoTaskRequest) returns (GetText2VideoTaskResponse) {
+    option (google.api.http) = {get: "/v1/videos/text2video/{task_id}"};
+  }
+  // rpc ListText2VideoTasks(ListText2VideoTasksRequest) returns (ListText2VideoTasksResponse) {
+  //   option (google.api.http) = {get: "/v1/videos/generations"};
+  // }
+
+  //   // 图生视频任务
+  //   rpc CreateImage2VideoTask(CreateImage2VideoTaskRequest) returns (CreateImage2VideoTaskResponse);
+  //   rpc GetImage2VideoTask(GetImage2VideoTaskRequest) returns (GetImage2VideoTaskResponse);
+  //   rpc ListImage2VideoTasks(ListImage2VideoTasksRequest) returns (ListImage2VideoTasksResponse);
+}
+
+// 虚拟试穿服务
+service VirtualTryOnService {
+  //   // 创建虚拟试穿任务
+  rpc CreateTryOnTask(CreateTryOnTaskRequest) returns (CreateTryOnTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/images/kolors-virtual-try-on"
+      body: "*"
+    };
+  }
+  //   // 查询单个任务
+  //   rpc GetTryOnTask(GetTryOnTaskRequest) returns (GetTryOnTaskResponse);
+  //   // 查询任务列表
+  //   rpc ListTryOnTasks(ListTryOnTasksRequest) returns (ListTryOnTasksResponse);
+}
+
+// 任务状态枚举
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_PENDING = 1; // 等待中
+  TASK_STATUS_PROCESSING = 2; // 处理中
+  TASK_STATUS_COMPLETED = 3; // 已完成
+  TASK_STATUS_FAILED = 4; // 失败
+}
+
+// 模型类型枚举
+enum ModelType {
+  MODEL_TYPE_UNSPECIFIED = 0;
+  MODEL_TYPE_KLING_V1 = 1; // kling-v1
+}
+
+// 画面纵横比枚举
+enum AspectRatio {
+  ASPECT_RATIO_UNSPECIFIED = 0;
+  ASPECT_RATIO_16_9 = 1; // 16:9
+  ASPECT_RATIO_9_16 = 2; // 9:16
+  ASPECT_RATIO_1_1 = 3; // 1:1
+  ASPECT_RATIO_4_3 = 4; // 4:3
+  ASPECT_RATIO_3_4 = 5; // 3:4
+  ASPECT_RATIO_3_2 = 6; // 3:2
+  ASPECT_RATIO_2_3 = 7; // 2:3
+}
+
+// 通用任务信息
+message TaskInfo {
+  string task_id = 1; // 任务ID
+  TaskStatus status = 2; // 任务状态
+  string create_time = 3; // 创建时间
+  string update_time = 4; // 更新时间
+  string error_message = 5; // 错误信息(如果有)
+}
+
+// 分页请求
+message PaginationRequest {
+  int32 page = 1; // 页码
+  int32 page_size = 2; // 每页大小
+}
+
+// 分页响应
+message PaginationResponse {
+  int32 total = 1; // 总数
+  int32 page = 2; // 当前页
+  int32 page_size = 3; // 每页大小
+}
+
+// 创建任务的基础请求参数
+message BaseTaskRequest {
+  string prompt = 1; // 正向提示词
+  string negative_prompt = 2; // 负向提示词(可选)
+}
+
+// 创建图像任务请求
+message CreateImageTaskRequest {
+  string model = 1; // 模型名称，可选，默认kling-v1
+  string prompt = 2 [(validate.rules) = {
+    string: {
+      max_len: 500
+      min_len: 1
+    }
+  }]; // 正向文本提示词，必须
+  string negative_prompt = 3 [(validate.rules) = {
+    string: {max_len: 200}
+  }]; // 负向文本提示词，可选
+  string image = 4; // 参考图片(Base64或URL)，可选
+  float image_fidelity = 5 [(validate.rules) = {
+    float: {
+      gte: 0
+      lte: 1
+    }
+  }]; // 图片参考强度，可选，默认0.5
+  int32 n = 6 [(validate.rules) = {
+    int32: {
+      gte: 1
+      lte: 9
+    }
+  }]; // 生成图片数量，可选，默认1
+  AspectRatio aspect_ratio = 7; // 画面纵横比，可选，默认16:9
+  string callback_url = 8; // 回调通知地址，可选
+}
+
+// 创建图像任务响应
+message CreateImageTaskResponse {
+  TaskInfo task_info = 1;
+}
+
+// 查询单个任务请求
+message GetImageTaskRequest {
+  string task_id = 1;
+}
+
+// 查询单个任务响应
+message GetImageTaskResponse {
+  TaskInfo task_info = 1;
+  repeated string image_urls = 2; // 生成的图片URL列表
+}
+
+// 查询任务列表请求
+message ListImageTasksRequest {
+  PaginationRequest pagination = 1;
+}
+
+// 查询任务列表响应
+message ListImageTasksResponse {
+  PaginationResponse pagination = 1;
+  repeated TaskInfo tasks = 2;
+}
+
+// 创建文生视频任务请求
+message CreateText2VideoTaskRequest {
+  string model_name = 1; // 模型名称，可选，默认kling-v1
+  string prompt = 2 [(validate.rules) = {
+    string: {
+      max_len: 2500
+      min_len: 1
+    }
+  }]; // 正向文本提示词，必须
+  string negative_prompt = 3 [(validate.rules) = {
+    string: {max_len: 2500}
+  }]; // 负向文本提示词，可选
+  float cfg_scale = 4 [(validate.rules) = {
+    float: {
+      gte: 0
+      lte: 1
+    }
+  }]; // 生成视频的自由度，可选，默认0.5
+  GenerationMode mode = 5; // 生成模式，可选，默认std
+  CameraControl camera_control = 6; // 摄像机控制，可选
+  AspectRatio aspect_ratio = 7; // 画面纵横比，可选，默认16:9
+  int32 duration = 8 [(validate.rules) = {
+    int32: {
+      in: [
+        5,
+        10
+      ]
+    }
+  }]; // 视频时长，可选，默认5
+  string callback_url = 9; // 回调通知地址，可选
+  string external_task_id = 10; // 自定义任务ID，可选
+}
+
+// 生成模式枚举
+enum GenerationMode {
+  MODE_UNSPECIFIED = 0;
+  MODE_STD = 1; // 标准模式
+  MODE_PRO = 2; // 专家模式
+}
+
+// 运镜类型枚举
+enum CameraType {
+  CAMERA_TYPE_UNSPECIFIED = 0;
+  simple = 1; // 简单运镜
+  down_back = 2; // 下移拉远
+  CAMERA_TYPE_FORWARD_UP = 3; // 推进上移
+  CAMERA_TYPE_RIGHT_TURN_FORWARD = 4; // 右旋推进
+  CAMERA_TYPE_LEFT_TURN_FORWARD = 5; // 左旋推进
+}
+
+// 摄像机配置
+message CameraConfig {
+  float horizontal = 1 [(validate.rules) = {
+    float: {
+      gte: -10
+      lte: 10
+    }
+  }]; // 水平运镜
+  float vertical = 2 [(validate.rules) = {
+    float: {
+      gte: -10
+      lte: 10
+    }
+  }]; // 垂直运镜
+  float pan = 3 [(validate.rules) = {
+    float: {
+      gte: -10
+      lte: 10
+    }
+  }]; // 水平摇镜
+  float tilt = 4 [(validate.rules) = {
+    float: {
+      gte: -10
+      lte: 10
+    }
+  }]; // 垂直摇镜
+  float roll = 5 [(validate.rules) = {
+    float: {
+      gte: -10
+      lte: 10
+    }
+  }]; // 旋转运镜
+  float zoom = 6 [(validate.rules) = {
+    float: {
+      gte: -10
+      lte: 10
+    }
+  }]; // 变焦
+}
+
+// 摄像机控制
+message CameraControl {
+  CameraType type = 1; // 运镜类型
+  CameraConfig config = 2; // 摄像机配置
+}
+
+message CreateText2VideoTaskResponse {
+  string task_id = 1; // 系统生成的任务ID
+  string external_task_id = 2; // 用户自定义任务ID
+  TaskStatus status = 3; // 任务状态
+}
+
+message GetText2VideoTaskRequest {
+  string task_id = 1; // 系统生成的任务ID
+  string external_task_id = 2; // 文生视频的自定义任务ID
+}
+
+message GetText2VideoTaskResponse {
+  string task_id = 1; // 任务ID，系统生成
+  TaskStatus task_status = 2; // 任务状态
+  string task_status_msg = 3; // 任务状态信息，当任务失败时展示失败原因
+  TaskInfo task_info = 4; // 任务创建时的参数信息
+  TaskResult task_result = 5; // 任务结果
+  int64 created_at = 6; // 任务创建时间，Unix时间戳、单位ms
+  int64 updated_at = 7; // 任务更新时间，Unix时间戳、单位ms
+}
+
+// 视频信息
+message VideoInfo {
+  string id = 1; // 生成的视频ID，全局唯一
+  string url = 2; // 生成视频的URL
+  string duration = 3; // 视频总时长，单位s
+}
+
+// 任务结果
+message TaskResult {
+  repeated VideoInfo videos = 1; // 生成的视频列表
+}
+
+message CreateTryOnTaskRequest {
+  string model_name = 1; // 模型名称，可选，默认kling-v1
+  string human_image = 2; // 模特图片(Base64或URL)，必须
+  string cloth_image = 3; // 服装图片(Base64或URL)，必须
+  string callback_url = 4; // 回调通知地址，可选
+}
+
+message CreateTryOnTaskResponse {
+  TaskInfo task_info = 1;
+}
