@@ -193,7 +193,7 @@ type EnqueueRequestMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m EnqueueRequestMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -295,7 +295,7 @@ type EnqueueResponseMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m EnqueueResponseMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -395,7 +395,7 @@ type QueryTasksRequestMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m QueryTasksRequestMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -531,7 +531,7 @@ type QueryTasksResponseMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m QueryTasksResponseMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -635,7 +635,7 @@ type PayLoadTaskTimeoutMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m PayLoadTaskTimeoutMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -738,7 +738,7 @@ type PayLoadTestMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m PayLoadTestMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -840,7 +840,7 @@ type PayLoadOrderPaymentCompletedMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m PayLoadOrderPaymentCompletedMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -945,7 +945,7 @@ type PayLoadOrderTimeoutMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m PayLoadOrderTimeoutMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1049,7 +1049,7 @@ type QueuingTimeRequestMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m QueuingTimeRequestMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1155,7 +1155,7 @@ type QueuingTimeResponseMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m QueuingTimeResponseMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1263,7 +1263,7 @@ type QueryTasksResponse_TaskInfoMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m QueryTasksResponse_TaskInfoMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}

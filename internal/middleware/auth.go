@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -60,13 +61,41 @@ func handleTransportAuth(tr transport.Transporter) (*jwt.Claims, error) {
 		user = &models.User{}
 	}
 	return &jwt.Claims{
-		Uid:  int64(user.ID),
+		Uid: int64(user.ID),
 	}, nil
 }
 
 // parseToken 解析token并更新用户信息
 func parseToken(ctx context.Context, r *http.Request, geoip *geoip2.Reader) (*jwt.Claims, error) {
 	token := extractToken(r.Header.Get("Authorization"))
+	if token == "" {
+		return nil, errors.Unauthorized("unauthorized", "missing bearer token")
+	}
+
+	// 可选的 JWT 校验：当环境变量配置了密钥时启用
+	accessSecret := os.Getenv("JWT_ACCESS_SECRET")
+	if accessSecret != "" {
+		manager := jwt.NewManager(jwt.Config{
+			AccessSecret:          accessSecret,
+			RefreshSecret:         os.Getenv("JWT_REFRESH_SECRET"),
+			AccessTokenDuration:   time.Hour,
+			RefreshTokenDuration:  30 * 24 * time.Hour,
+			AccessTokenCookieName: "",
+		})
+		if claims, err := manager.ValidateAccessToken(token); err == nil {
+			// 已通过签名校验，直接使用 claims；后续补全地理信息
+			clientIP := getClientIP(r)
+			if err := fillGeoOnDemand(geoip, clientIP, claims); err != nil {
+				logger.Warnf(ctx, "fill geo info failed: %v", err)
+			}
+			return claims, nil
+		} else {
+			// 签名校验失败，返回 401
+			return nil, errors.Unauthorized("unauthorized", "invalid token")
+		}
+	}
+
+	// 兼容旧方案：将 Bearer 当作 UUID 使用
 	user, err := models.NewUserModel().SetUUIds(token).FirstOne()
 	if err != nil {
 		return &jwt.Claims{}, nil
@@ -193,6 +222,26 @@ func getClientIP(r *http.Request) string {
 	return parseRemoteAddr(r.RemoteAddr)
 }
 
+// fillGeoOnDemand enriches JWT claims with geo info based on client IP using GeoIP DB.
+func fillGeoOnDemand(geoip *geoip2.Reader, clientIP string, claims *jwt.Claims) error {
+	if geoip == nil || clientIP == "" {
+		return nil
+	}
+	if net.ParseIP(clientIP) == nil {
+		return nil
+	}
+	city, err := geoip.City(net.ParseIP(clientIP))
+	if err != nil {
+		return err
+	}
+	claims.ClientIP = clientIP
+	claims.CountryCode = city.Country.IsoCode
+	claims.Country = city.Country.Names["en"]
+	claims.City = city.City.Names["en"]
+	claims.ZipCode = city.Postal.Code
+	return nil
+}
+
 // getIPFromXFF 从X-Forwarded-For获取IP
 func getIPFromXFF(xff string) string {
 	if xff == "" {
@@ -247,7 +296,7 @@ func AuthAdmin() middleware.Middleware {
 			}
 
 			ctx = NewContext(ctx, &jwt.Claims{
-				Uid:  int64(user.ID),
+				Uid: int64(user.ID),
 			})
 			return h(ctx, req)
 		}

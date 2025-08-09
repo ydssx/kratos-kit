@@ -47,9 +47,10 @@ func NewDB(dsn ...string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get mysql db")
 	}
-	sqlDB.SetMaxIdleConns(100)
+	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
+	sqlDB.SetConnMaxIdleTime(30 * time.Minute)
 	logger.Info(context.Background(), "init mysql success")
 	return db, nil
 }

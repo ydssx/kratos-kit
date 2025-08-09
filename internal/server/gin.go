@@ -39,7 +39,10 @@ func NewGinMux(
 	)
 
 	// Add a GET route for the API documentation
-	mux.GET("/docs", gin.BasicAuth(gin.Accounts{"admin": "admin"}), docsHandler)
+	// 文档访问的 BasicAuth 改为读取环境变量，默认 admin/admin
+	user := util.GetEnvDefault("BASIC_AUTH_USERNAME", "admin")
+	pass := util.GetEnvDefault("BASIC_AUTH_PASSWORD", "admin")
+	mux.GET("/docs", gin.BasicAuth(gin.Accounts{user: pass}), docsHandler)
 
 	// Add a GET route for the Swagger UI
 	// The Swagger UI is accessible at http://localhost:9000/swagger/index.html

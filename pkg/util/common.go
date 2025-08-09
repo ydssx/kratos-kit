@@ -291,6 +291,9 @@ func GetEnv(key, fallback string) string {
 	return fallback
 }
 
+// GetEnvDefault is an alias of GetEnv for readability at call sites.
+func GetEnvDefault(key, fallback string) string { return GetEnv(key, fallback) }
+
 func GetUUID() string {
 	return uuid.New().String()
 }

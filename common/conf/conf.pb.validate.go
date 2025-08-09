@@ -516,7 +516,7 @@ type BootstrapMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m BootstrapMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -674,7 +674,7 @@ type ServerMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m ServerMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -946,7 +946,7 @@ type DataMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m DataMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1139,7 +1139,7 @@ type RedisMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m RedisMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1334,7 +1334,7 @@ type MongoMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m MongoMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1446,7 +1446,7 @@ type LoggerMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m LoggerMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1550,7 +1550,7 @@ type AsynqMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m AsynqMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1656,7 +1656,7 @@ type GoogleCloudStorageMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m GoogleCloudStorageMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1758,7 +1758,7 @@ type GeoipMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m GeoipMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1868,7 +1868,7 @@ type PaymentMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m PaymentMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1969,7 +1969,7 @@ type FacedetectMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m FacedetectMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2071,7 +2071,7 @@ type WebhookMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m WebhookMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2171,7 +2171,7 @@ type AesMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m AesMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2275,7 +2275,7 @@ type GoogleMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m GoogleMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2383,7 +2383,7 @@ type EmailMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m EmailMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2515,7 +2515,7 @@ type Server_HTTPMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m Server_HTTPMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2647,7 +2647,7 @@ type Server_GRPCMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m Server_GRPCMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2749,7 +2749,7 @@ type Data_DatabaseMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m Data_DatabaseMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
