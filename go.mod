@@ -1,6 +1,6 @@
 module github.com/ydssx/kratos-kit
 
-go 1.22.3
+go 1.25
 
 require (
 	cloud.google.com/go/storage v1.41.0
