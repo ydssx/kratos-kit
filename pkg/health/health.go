@@ -2,13 +2,12 @@ package health
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/go-kratos/kratos/v2/log"
 	"github.com/redis/go-redis/v9"
+	"github.com/ydssx/kratos-kit/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -74,10 +73,10 @@ func (h *RedisHealthChecker) Name() string {
 // HealthService 健康检查服务
 type HealthService struct {
 	checkers []HealthChecker
-	logger   log.Logger
+	logger   *logger.Logger
 }
 
-func NewHealthService(logger log.Logger, checkers ...HealthChecker) *HealthService {
+func NewHealthService(logger *logger.Logger, checkers ...HealthChecker) *HealthService {
 	return &HealthService{
 		checkers: checkers,
 		logger:   logger,
@@ -91,7 +90,7 @@ func (h *HealthService) CheckAll(ctx context.Context) map[string]error {
 	for _, checker := range h.checkers {
 		if err := checker.Check(ctx); err != nil {
 			results[checker.Name()] = err
-			h.logger.Errorf(ctx, "health check failed for %s: %v", checker.Name(), err)
+			logger.Errorf(ctx, "health check failed for %s: %v", checker.Name(), err)
 		} else {
 			results[checker.Name()] = nil
 		}
