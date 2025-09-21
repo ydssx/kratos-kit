@@ -2,107 +2,224 @@ package kafka
 
 import (
 	"context"
+	"sync"
+	"time"
 
-	"github.com/IBM/sarama"
+	"github.com/segmentio/kafka-go"
 )
 
 type Producer struct {
-	producer sarama.SyncProducer
+	writer *kafka.Writer
 }
 
-func NewProducer(brokers []string) (*Producer, error) {
-	config := sarama.NewConfig()
-	config.Producer.Return.Successes = true
-	config.Producer.Return.Errors = true
-	producer, err := sarama.NewSyncProducer(brokers, config)
-	if err != nil {
-		return nil, err
+// ProducerConfig 生产者配置
+type ProducerConfig struct {
+	Brokers      []string
+	BatchSize    int
+	BatchTimeout time.Duration
+	Async        bool
+}
+
+// NewProducer creates a new Kafka producer with the given configuration
+func NewProducer(cfg ProducerConfig) (*Producer, error) {
+	if cfg.BatchTimeout == 0 {
+		cfg.BatchTimeout = time.Millisecond * 100
+	}
+	if cfg.BatchSize == 0 {
+		cfg.BatchSize = 100
 	}
 
-	return &Producer{producer: producer}, nil
+	writer := &kafka.Writer{
+		Addr:         kafka.TCP(cfg.Brokers...),
+		BatchSize:    cfg.BatchSize,
+		BatchTimeout: cfg.BatchTimeout,
+		RequiredAcks: kafka.RequireAll,
+		Async:        cfg.Async,
+	}
+
+	return &Producer{writer: writer}, nil
 }
 
 func (p *Producer) Close() error {
-	return p.producer.Close()
+	return p.writer.Close()
 }
 
-// SendMessage sends a message using the Producer.
-//
-// It takes a string `message` as a parameter and returns an error.
-func (p *Producer) SendMessage(topic, message string) error {
-	_, _, err := p.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: topic,
-		Value: sarama.StringEncoder(message),
-	})
-	return err
+// SendMessage sends a message using the Producer
+func (p *Producer) SendMessage(ctx context.Context, topic string, key, value []byte) error {
+	return p.writer.WriteMessages(ctx,
+		kafka.Message{
+			Topic: topic,
+			Key:   key,
+			Value: value,
+		},
+	)
+}
+
+// SendMessages sends multiple messages using the Producer
+func (p *Producer) SendMessages(ctx context.Context, topic string, messages []kafka.Message) error {
+	return p.writer.WriteMessages(ctx, messages...)
 }
 
 type Consumer struct {
-	consumer sarama.ConsumerGroup
-	handler  sarama.ConsumerGroupHandler
-	topics   []string
+	reader      *kafka.Reader
+	handler     func(message []byte)
+	errorHandler func(err error)
 }
 
-type ConsumerHandler struct {
-	handle func(message []byte)
+// ConsumerConfig 消费者配置
+type ConsumerConfig struct {
+	Brokers      []string
+	GroupID      string
+	Topics       []string
+	MinBytes     int
+	MaxBytes     int
+	MaxWait      time.Duration
+	StartOffset  int64
+	ErrorHandler func(err error)
 }
 
-// NewConsumer 创建一个新的消费者。它接受 Kafka broker 地址列表、消费者组 ID、订阅的主题列表以及消息处理函数作为参数。
-// 它会根据给定的配置创建一个 sarama 消费者,并用提供的处理函数封装一个 ConsumerHandler。
-// 最后它会返回一个初始化好的 Consumer 结构体。如果创建消费者失败则返回错误。
-func NewConsumer(brokers []string, groupID string, topics []string, handler func(message []byte)) (*Consumer, error) {
-	config := sarama.NewConfig()
-	config.Consumer.Group.Rebalance.Strategy = sarama.NewBalanceStrategyRange()
-	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	consumer, err := sarama.NewConsumerGroup(brokers, groupID, config)
-	if err != nil {
-		return nil, err
+// NewConsumer creates a new consumer with the given configuration
+func NewConsumer(cfg ConsumerConfig, handler func(message []byte)) (*Consumer, error) {
+	if cfg.MinBytes == 0 {
+		cfg.MinBytes = 10e3 // 10KB
 	}
-	consumerHandler := &ConsumerHandler{handle: handler}
+	if cfg.MaxBytes == 0 {
+		cfg.MaxBytes = 10e6 // 10MB
+	}
+	if cfg.MaxWait == 0 {
+		cfg.MaxWait = time.Second
+	}
+	if cfg.StartOffset == 0 {
+		cfg.StartOffset = kafka.FirstOffset
+	}
+	if cfg.ErrorHandler == nil {
+		cfg.ErrorHandler = func(err error) {}
+	}
+
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:     cfg.Brokers,
+		GroupID:     cfg.GroupID,
+		GroupTopics: cfg.Topics,
+		MinBytes:    cfg.MinBytes,
+		MaxBytes:    cfg.MaxBytes,
+		MaxWait:     cfg.MaxWait,
+		StartOffset: cfg.StartOffset,
+	})
+
 	return &Consumer{
-		consumer: consumer,
-		handler:  consumerHandler,
-		topics:   topics,
+		reader:       reader,
+		handler:      handler,
+		errorHandler: cfg.ErrorHandler,
 	}, nil
 }
 
-func (c *Consumer) Consume() error {
-	err := c.consumer.Consume(context.Background(), c.topics, c.handler)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// Consume starts consuming messages from Kafka
+func (c *Consumer) Consume(ctx context.Context) error {
+	for {
+		message, err := c.reader.ReadMessage(ctx)
+		if err != nil {
+			if err == context.Canceled {
+				return err
+			}
+			c.errorHandler(err)
+			continue
+		}
 
-func (c *Consumer) Close() error {
-	return c.consumer.Close()
-}
+		// 处理消息
+		c.handler(message.Value)
 
-func (h *ConsumerHandler) Setup(sarama.ConsumerGroupSession) error {
-	return nil
-}
-
-func (h *ConsumerHandler) Cleanup(sarama.ConsumerGroupSession) error {
-	return nil
-}
-
-// ConsumeClaim consumes messages from a Kafka topic.
-//
-// It takes in a session from the sarama.ConsumerGroupSession and a claim from
-// the sarama.ConsumerGroupClaim. The session is used to mark the consumption of
-// messages and the claim is used to retrieve the messages from the Kafka topic.
-//
-// The function returns an error if there is an issue consuming the messages.
-func (h *ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	for message := range claim.Messages() {
-		h.handle(message.Value)
-		session.MarkMessage(message, "")
 		select {
-		case <-session.Context().Done():
-			return session.Context().Err()
+		case <-ctx.Done():
+			return ctx.Err()
 		default:
 			continue
 		}
 	}
+}
+
+func (c *Consumer) Close() error {
+	return c.reader.Close()
+}
+
+// ConsumerGroup 管理多个消费者的消费者组
+type ConsumerGroup struct {
+	consumers []*Consumer
+	wg       sync.WaitGroup
+	ctx      context.Context
+	cancel   context.CancelFunc
+}
+
+// ConsumerGroupConfig 消费者组配置
+type ConsumerGroupConfig struct {
+	Brokers      []string
+	GroupID      string
+	Topics       []string
+	NumConsumers int // 消费者数量
+	MinBytes     int
+	MaxBytes     int
+	MaxWait      time.Duration
+	StartOffset  int64
+}
+
+// NewConsumerGroup 创建一个新的消费者组
+func NewConsumerGroup(cfg ConsumerGroupConfig, handler func(message []byte)) (*ConsumerGroup, error) {
+	if cfg.NumConsumers <= 0 {
+		cfg.NumConsumers = 1
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	group := &ConsumerGroup{
+		ctx:    ctx,
+		cancel: cancel,
+	}
+
+	// 创建多个消费者
+	for i := 0; i < cfg.NumConsumers; i++ {
+		consumer, err := NewConsumer(ConsumerConfig{
+			Brokers:     cfg.Brokers,
+			GroupID:     cfg.GroupID,
+			Topics:      cfg.Topics,
+			MinBytes:    cfg.MinBytes,
+			MaxBytes:    cfg.MaxBytes,
+			MaxWait:     cfg.MaxWait,
+			StartOffset: cfg.StartOffset,
+		}, handler)
+		if err != nil {
+			group.Close()
+			return nil, err
+		}
+		group.consumers = append(group.consumers, consumer)
+	}
+
+	return group, nil
+}
+
+// Start 启动所有消费者
+func (g *ConsumerGroup) Start() error {
+	for _, consumer := range g.consumers {
+		g.wg.Add(1)
+		go func(c *Consumer) {
+			defer g.wg.Done()
+			err := c.Consume(g.ctx)
+			if err != nil && err != context.Canceled {
+				// TODO: 处理错误，可以添加错误回调或日志
+				return
+			}
+		}(consumer)
+	}
 	return nil
+}
+
+// Close 关闭消费者组
+func (g *ConsumerGroup) Close() error {
+	g.cancel()
+	g.wg.Wait()
+
+	var lastErr error
+	for _, consumer := range g.consumers {
+		if err := consumer.Close(); err != nil {
+			lastErr = err
+		}
+	}
+	return lastErr
 }

@@ -35,12 +35,12 @@ func wireApp(ctx context.Context, c *conf.Bootstrap, logger log.Logger) (*kratos
 	if err != nil {
 		return nil, nil, err
 	}
-	dataData, cleanup, err := data.NewData(logger, client, db)
+	dataData, err := data.NewData(ctx, logger, client, db)
 	if err != nil {
 		return nil, nil, err
 	}
 	transaction := data.NewTransaction(dataData)
-	googleCloudStorage, cleanup2 := common.NewGoogleCloudStorage(c)
+	googleCloudStorage, cleanup := common.NewGoogleCloudStorage(c)
 	userRepo := data.NewUserRepo(dataData, logger)
 	cache := data.NewRedisCache(client)
 	bizUserRepo := data.NewUserRepoCacheDecorator(userRepo, cache)
@@ -52,7 +52,6 @@ func wireApp(ctx context.Context, c *conf.Bootstrap, logger log.Logger) (*kratos
 	v := admin.NewServer(server, jobServer)
 	app := newApp(ctx, c, v...)
 	return app, func() {
-		cleanup2()
 		cleanup()
 	}, nil
 }

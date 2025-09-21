@@ -127,7 +127,9 @@ message LoginRequest {
 }
 
 message LoginResponse {
-  string uuid = 1; // 用户uuid
+  string uuid = 1; // 用户uuid（兼容保留）
+  string access_token = 2; // 访问令牌（可选，若启用JWT）
+  string refresh_token = 3; // 刷新令牌（可选，若启用JWT）
 }
 
 message CreateRequest {

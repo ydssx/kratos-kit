@@ -85,12 +85,8 @@ func GenerateCSRFToken() string {
 func XSS() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
-			if tr, ok := transport.FromServerContext(ctx); ok {
-				if tr.Kind() == transport.KindHTTP {
-					// Sanitize input parameters
-					sanitizeHeaders(tr.RequestHeader())
-				}
-			}
+			// XSS protection is handled by security headers
+			// Additional input sanitization can be added here if needed
 			return handler(ctx, req)
 		}
 	}

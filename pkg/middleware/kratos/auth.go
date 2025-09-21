@@ -12,17 +12,14 @@ import (
 )
 
 // AuthServer 返回一个中间件,用于验证 JWT 令牌并将 Claims 添加到 context 中。
-// 它从请求头中获取 Authorization 字段,验证 JWT 令牌,如果验证失败返回 401 Unauthorized 错误。
-// 如果验证成功,将 Claims 添加到 context 中,继续处理请求。
-// 这是一个用于认证的公共中间件。
-func AuthServer() middleware.Middleware {
+func AuthServer(jwtManager *jwt.Manager) middleware.Middleware {
 	return func(h middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
 			ts, ok := transport.FromServerContext(ctx)
 			if ok {
 				header := ts.RequestHeader()
 				token := strings.ReplaceAll(header.Get("Authorization"), "Bearer ", "")
-				claims, err := jwt.VerifyToken(token)
+				claims, err := jwtManager.ValidateAccessToken(token)
 				if err != nil {
 					return nil, errors.Unauthorized(err.Error(), "请登录")
 				}

@@ -29,13 +29,13 @@ message Server {
     string addr = 2;
     google.protobuf.Duration timeout = 3;
     // 安全配置
-    string jwt_secret = 4;                   // JWT密钥
+    string jwt_secret = 4; // JWT密钥
     google.protobuf.Duration jwt_expiry = 5; // JWT过期时间
-    float rate_limit = 6;                    // 请求速率限制
-    int32 rate_burst = 7;                    // 速率限制突发值
-    repeated string allow_origins = 8;       // CORS允许的源
-    Auth auth = 9;                           // 认证配置
-    Security security = 10;                  // 安全配置
+    float rate_limit = 6; // 请求速率限制
+    int32 rate_burst = 7; // 速率限制突发值
+    repeated string allow_origins = 8; // CORS允许的源
+    Auth auth = 9; // 认证配置
+    Security security = 10; // 安全配置
   }
   message GRPC {
     string network = 1;
@@ -48,15 +48,15 @@ message Server {
 }
 
 message Auth {
-  string username = 1;                     // 基本认证用户名
-  string password = 2;                     // 基本认证密码
+  string username = 1; // 基本认证用户名
+  string password = 2; // 基本认证密码
 }
 
 message Security {
-  bool enable_csrf = 1;                    // 启用CSRF保护
-  bool enable_xss = 2;                     // 启用XSS保护
-  bool enable_security_headers = 3;        // 启用安全响应头
-  repeated string csrf_exclude_paths = 4;  // CSRF排除路径
+  bool enable_csrf = 1; // 启用CSRF保护
+  bool enable_xss = 2; // 启用XSS保护
+  bool enable_security_headers = 3; // 启用安全响应头
+  repeated string csrf_exclude_paths = 4; // CSRF排除路径
 }
 
 message Data {
@@ -64,13 +64,13 @@ message Data {
     string driver = 1;
     repeated string source = 2;
     // 数据库安全配置
-    int32 max_open_conns = 3;              // 最大打开连接数
-    int32 max_idle_conns = 4;              // 最大空闲连接数
+    int32 max_open_conns = 3; // 最大打开连接数
+    int32 max_idle_conns = 4; // 最大空闲连接数
     google.protobuf.Duration conn_max_lifetime = 5; // 连接最大生命周期
-    bool enable_ssl = 6;                   // 启用SSL
-    string ssl_ca = 7;                     // SSL CA证书路径
-    string ssl_cert = 8;                   // SSL 证书路径
-    string ssl_key = 9;                    // SSL 密钥路径
+    bool enable_ssl = 6; // 启用SSL
+    string ssl_ca = 7; // SSL CA证书路径
+    string ssl_cert = 8; // SSL 证书路径
+    string ssl_key = 9; // SSL 密钥路径
   }
   Database database = 1;
   Redis redis = 2;
@@ -89,9 +89,9 @@ message Redis {
   google.protobuf.Duration dial_timeout = 6;
   int32 db = 7;
   // Redis安全配置
-  bool enable_tls = 8;                   // 启用TLS
-  bool tls_skip_verify = 9;              // 跳过TLS验证
-  int32 max_retries = 10;                // 最大重试次数
+  bool enable_tls = 8; // 启用TLS
+  bool tls_skip_verify = 9; // 跳过TLS验证
+  int32 max_retries = 10; // 最大重试次数
   google.protobuf.Duration min_retry_backoff = 11; // 最小重试间隔
   google.protobuf.Duration max_retry_backoff = 12; // 最大重试间隔
 }

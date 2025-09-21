@@ -42,9 +42,8 @@ type contextTxKey struct{}
 //
 // It returns the following:
 //   - data: an instance of Data containing the initialized Redis, database, and MongoDB clients
-//   - cleanup: a cleanup function that can be used to close the MongoDB client and perform any necessary cleanup tasks
 //   - error: an error, if any, encountered during the initialization process
-func NewData(logger log.Logger, rdb *goredis.Client, db *gorm.DB) (*Data, func(), error) {
+func NewData(ctx context.Context, logger log.Logger, rdb *goredis.Client, db *gorm.DB) (*Data, error) {
 	cleanup := func() {
 		log.Info("closing the data resources")
 
@@ -52,7 +51,9 @@ func NewData(logger log.Logger, rdb *goredis.Client, db *gorm.DB) (*Data, func()
 			log.Error("close redis failed:", err)
 		}
 	}
-	return &Data{rdb: rdb, db: db}, cleanup, nil
+	context.AfterFunc(ctx, cleanup)
+
+	return &Data{rdb: rdb, db: db}, nil
 }
 
 // InTx 在一个数据库事务中执行函数 fn。

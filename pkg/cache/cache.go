@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ydssx/kratos-kit/pkg/logger"
+	"golang.org/x/sync/singleflight"
 )
 
 type Cache interface {
@@ -18,6 +19,8 @@ type Cache interface {
 	Clear(ctx context.Context) error
 }
 
+var g singleflight.Group
+
 // WithCache 通用缓存装饰器
 func WithCache[T any](c Cache, ctx context.Context, key string, duration time.Duration, fn func() (T, error)) (T, error) {
 	var data T
@@ -26,14 +29,27 @@ func WithCache[T any](c Cache, ctx context.Context, key string, duration time.Du
 		return data, nil
 	}
 
-	data, err = fn()
+	// 使用singleflight防止缓存击穿
+	v, err, _ := g.Do(key, func() (interface{}, error) {
+		var data T
+		if err := c.Get(ctx, key, &data); err == nil {
+			return data, nil
+		}
+
+		d, err := fn()
+		if err != nil {
+			return d, err
+		}
+
+		if err := c.Set(ctx, key, d, duration); err != nil {
+			logger.Errorf(ctx, "cache set error: %v", err)
+		}
+		return d, nil
+	})
+
 	if err != nil {
 		return data, err
 	}
 
-	if err := c.Set(ctx, key, data, duration); err != nil {
-		logger.Errorf(ctx, "cache set error: %v", err)
-	}
-
-	return data, nil
+	return v.(T), nil
 }

@@ -15,7 +15,7 @@ var ProviderSet = wire.NewSet(
 	wire.Bind(new(limit.Limiter), new(*limit.RedisLimiter)),
 	NewHTTPServer,
 	NewJobServer,
-	NewGinServer,
+	NewGinMux,
 	NewGRPCServer,
 	NewServer,
 )

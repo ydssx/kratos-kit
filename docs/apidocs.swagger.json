@@ -371,7 +371,15 @@
       "properties": {
         "uuid": {
           "type": "string",
-          "title": "用户uuid"
+          "title": "用户uuid（兼容保留）"
+        },
+        "access_token": {
+          "type": "string",
+          "title": "访问令牌（可选，若启用JWT）"
+        },
+        "refresh_token": {
+          "type": "string",
+          "title": "刷新令牌（可选，若启用JWT）"
         }
       }
     },

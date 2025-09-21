@@ -200,7 +200,9 @@ func getLevel(level string) zapcore.Level {
 	}
 }
 
-var msg = `环境：%s
+// 添加 webhook 相关方法
+func (l *Logger) sendWebhookMessage(ce *zapcore.CheckedEntry, kvMap map[string]interface{}, stack []string) {
+	msg := `环境：%s
 级别：%s
 时间：%s
 日志：%s
@@ -209,9 +211,6 @@ path：%s
 caller：%s
 堆栈：%s
 `
-
-// 添加 webhook 相关方法
-func (l *Logger) sendWebhookMessage(ce *zapcore.CheckedEntry, kvMap map[string]interface{}, stack []string) {
 	message := fmt.Sprintf(msg,
 		os.Getenv(string(constants.EnvKeyEnv)),
 		ce.Level.String(),
@@ -220,7 +219,7 @@ func (l *Logger) sendWebhookMessage(ce *zapcore.CheckedEntry, kvMap map[string]i
 		kvMap[string(constants.LogKeyTraceID)],
 		kvMap[string(constants.LogKeyOperation)],
 		ce.Caller.TrimmedPath(),
-		strings.Join(stack, "\n"))
+		strings.Join(stack[:min(len(stack), 10)], "\n"))
 
 	if l.opts.webhookURL != "" {
 		go webhook.NewWebhook(l.opts.webhookURL).SendMessage(message)

@@ -48,12 +48,12 @@ func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, exp
 	}
 
 	// 添加随机过期时间防止缓存雪崩，随机范围为原过期时间的10%
-	randomFactor := time.Duration(rand.Intn(int(expire/10))) + expire
-	if randomFactor > expire*2 {
-		randomFactor = expire * 2
+	randomExpire := expire + time.Duration(rand.Int63n(int64(expire/10)))
+	if expire == 0 {
+		randomExpire = 0
 	}
 
-	err = c.client.Set(ctx, cachePrefix+key, string(data), randomFactor).Err()
+	err = c.client.Set(ctx, cachePrefix+key, string(data), randomExpire).Err()
 	if err != nil {
 		return errors.Wrap(err, "set redis key error")
 	}

@@ -35,7 +35,10 @@ func GetConfig(ctx context.Context) *conf.Bootstrap {
 
 func Execute() {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	defer func() {
+		cancel()
+		time.Sleep(time.Millisecond * 10)
+	}()
 
 	if cfgFile != "" {
 		var config conf.Bootstrap
