@@ -4,16 +4,27 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var (
-	SecretKey      = []byte("123456")    // 秘钥
+	SecretKey      = getSecretKey()      // 从环境变量获取秘钥
 	ExpireDuration = time.Hour * 24 * 30 // 过期时间
 )
+
+// getSecretKey 从环境变量获取JWT密钥，如果未设置则使用默认值
+func getSecretKey() []byte {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		// 生产环境应该设置环境变量，这里使用默认值仅用于开发
+		secret = "your-super-secret-jwt-key-change-in-production"
+	}
+	return []byte(secret)
+}
 
 type Claims struct {
 	Uid         int64  `json:"uid"`
@@ -28,7 +39,7 @@ type Claims struct {
 	SiteId      int    `json:"site_id"`
 	IsAdUser    bool   `json:"is_ad_user"`
 	Uuid        string `json:"uuid"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 // GenerateToken 生成一个包含uid、用户名、角色信息的JWT token。
@@ -40,8 +51,10 @@ func GenerateToken(uid int64, username, role string, utype int) (string, error) 
 		Username: username,
 		Role:     role,
 		Type:     utype,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(ExpireDuration).Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ExpireDuration)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "my_app",
 		},
 	}

@@ -25,6 +25,9 @@ import (
 	"github.com/ydssx/kratos-kit/internal/service"
 	"github.com/ydssx/kratos-kit/pkg/errors"
 	"github.com/ydssx/kratos-kit/pkg/limit"
+	"github.com/ydssx/kratos-kit/pkg/middleware/auth"
+	securitymw "github.com/ydssx/kratos-kit/pkg/middleware/security"
+	validatormw "github.com/ydssx/kratos-kit/pkg/middleware/validator"
 	"github.com/ydssx/kratos-kit/pkg/sse"
 	"github.com/ydssx/kratos-kit/pkg/util"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -40,10 +43,15 @@ const (
 
 // HTTPServerConfig HTTP服务器配置
 type HTTPServerConfig struct {
-	Addr     string
-	Timeout  time.Duration
-	Username string
-	Password string
+	Addr         string
+	Timeout      time.Duration
+	Username     string
+	Password     string
+	JWTSecret    string        // JWT密钥
+	JWTExpiry    time.Duration // JWT过期时间
+	RateLimit    float64       // 请求速率限制
+	RateBurst    int          // 速率限制突发值
+	AllowOrigins []string     // CORS允许的源
 }
 
 // NewHTTPServer 创建HTTP服务器
@@ -70,11 +78,32 @@ func NewHTTPServer(
 
 // buildServerOptions 构建服务器选项
 func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter limit.Limiter) []http.ServerOption {
+	// 不需要认证的路径
+	skipAuthPaths := []string{
+		"/api/v1/user/login",
+		"/api/v1/user/register",
+		"/metrics",
+		"/debug/pprof",
+		"/healthz",
+	}
+
 	opts := []http.ServerOption{
 		http.Middleware(
 			recovery.Recovery(),
+			// 安全相关中间件
+			securitymw.SecurityHeaders(),
+			securitymw.RateLimiter(cfg.RateLimit, cfg.RateBurst),
+			securitymw.CSRF(),
+			securitymw.XSS(),
+			// 验证相关中间件
+			validatormw.Validator(),
+			validatormw.SQLInjectionValidator(),
+			validatormw.PathTraversalValidator(),
+			validatormw.CommandInjectionValidator(),
+			// 认证和授权中间件
+			selector.Server(auth.JWTAuth(cfg.JWTSecret, skipAuthPaths)).Match(newWhiteListMatcher()).Build(),
+			// 其他中间件
 			middleware.RateLimit(limiter),
-			middleware.Validator(),
 			middleware.TraceServer(),
 			selector.Server(middleware.AuthServer(geoip)).Match(newWhiteListMatcher()).Build(),
 			middleware.LanguageMiddleware(),
@@ -279,10 +308,15 @@ func getHTTPConfig(c *conf.Bootstrap) HTTPServerConfig {
 		timeout = c.Server.Http.Timeout.AsDuration()
 	}
 	return HTTPServerConfig{
-		Addr:     c.Server.Http.Addr,
-		Timeout:  timeout,
-		Username: "admin", // 可以从配置文件读取
-		Password: "admin",
+		Addr:         c.Server.Http.Addr,
+		Timeout:      timeout,
+		Username:     "admin", // 可以从配置文件读取
+		Password:     "admin",
+		JWTSecret:    c.Server.Http.JWTSecret,
+		JWTExpiry:    c.Server.Http.JWTExpiry,
+		RateLimit:    c.Server.Http.RateLimit,
+		RateBurst:    c.Server.Http.RateBurst,
+		AllowOrigins: c.Server.Http.AllowOrigins,
 	}
 }
 

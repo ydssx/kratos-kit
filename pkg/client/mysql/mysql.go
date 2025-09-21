@@ -16,11 +16,34 @@ import (
 
 var db *gorm.DB
 
+// DBConfig 数据库配置
+type DBConfig struct {
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	SlowThreshold   time.Duration
+}
+
+// DefaultDBConfig 返回默认数据库配置
+func DefaultDBConfig() *DBConfig {
+	return &DBConfig{
+		MaxOpenConns:    100,
+		MaxIdleConns:    10,
+		ConnMaxLifetime: time.Hour,
+		SlowThreshold:   time.Millisecond * 200,
+	}
+}
+
 // NewDB initializes a new MySQL database connection pool and returns the gorm.DB instance.
 // It takes the MySQL DSN as a parameter.
 // It configures the gorm logger, prepares statements, sets connection pool limits and logs success.
 // Returns the gorm.DB instance and any error.
 func NewDB(dsn ...string) (*gorm.DB, error) {
+	return NewDBWithConfig(DefaultDBConfig(), dsn...)
+}
+
+// NewDBWithConfig initializes a new MySQL database connection pool with custom config
+func NewDBWithConfig(config *DBConfig, dsn ...string) (*gorm.DB, error) {
 	if len(dsn) == 0 {
 		return nil, errors.New("dsn is required")
 	}
@@ -31,7 +54,7 @@ func NewDB(dsn ...string) (*gorm.DB, error) {
 
 	var err error
 	db, err = gorm.Open(dialectors[0], &gorm.Config{
-		Logger:      NewGormLogger(zapcore.InfoLevel, zapcore.InfoLevel, time.Millisecond*200),
+		Logger:      NewGormLogger(zapcore.InfoLevel, zapcore.InfoLevel, config.SlowThreshold),
 		PrepareStmt: true,
 	})
 	if err != nil {
@@ -47,9 +70,9 @@ func NewDB(dsn ...string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get mysql db")
 	}
-	sqlDB.SetMaxIdleConns(100)
-	sqlDB.SetMaxOpenConns(100)
-	sqlDB.SetConnMaxLifetime(time.Hour)
+	sqlDB.SetMaxIdleConns(config.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(config.MaxOpenConns)
+	sqlDB.SetConnMaxLifetime(config.ConnMaxLifetime)
 	logger.Info(context.Background(), "init mysql success")
 	return db, nil
 }
