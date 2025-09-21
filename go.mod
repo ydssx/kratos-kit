@@ -13,7 +13,7 @@ require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/cloudevents/sdk-go/v2 v2.15.2
 	github.com/dave/dst v0.27.3
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/emicklei/proto v1.13.2
 	github.com/envoyproxy/protoc-gen-validate v1.1.0
 	github.com/fatih/color v1.13.0
