@@ -28,7 +28,7 @@ func NewRedisCache(client *redis.Client) *RedisCache {
 // Get 从redis中获取指定key的值,并反序列化到result中
 // 如果key不存在,将返回key not found错误
 // 如果发生其他错误,将直接返回错误
-func (c *RedisCache) Get(ctx context.Context, key string, result interface{}) error {
+func (c *RedisCache) Get(ctx context.Context, key string, result any) error {
 	val, err := c.client.Get(ctx, cachePrefix+key).Result()
 	if err == redis.Nil {
 		return fmt.Errorf("key %s not found", key)
@@ -41,7 +41,7 @@ func (c *RedisCache) Get(ctx context.Context, key string, result interface{}) er
 }
 
 // Set 将指定的key/value对设置到redis中,并设置过期时间
-func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, expire time.Duration) error {
+func (c *RedisCache) Set(ctx context.Context, key string, value any, expire time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return errors.Wrap(err, "marshal value error")
