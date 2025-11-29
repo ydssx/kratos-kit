@@ -14,7 +14,7 @@ import (
 type Response struct {
 	Code   int         `json:"code"`
 	Msg    string      `json:"msg"`
-	Data   interface{} `json:"data"`
+	Data   any `json:"data"`
 	Reason string      `json:"reason,omitempty"`
 }
 
@@ -25,7 +25,7 @@ const (
 	SuccessMsg = "SUCCESS"
 )
 
-func result(c *gin.Context, httpCode int, code int, data interface{}, msg, reason string) {
+func result(c *gin.Context, httpCode int, code int, data any, msg, reason string) {
 	c.JSON(httpCode, Response{
 		Code:   code,
 		Msg:    msg,
@@ -38,7 +38,7 @@ func OK(c *gin.Context) {
 	result(c, http.StatusOK, SUCCESS, nil, SuccessMsg, "")
 }
 
-func OKWithData(c *gin.Context, data interface{}) {
+func OKWithData(c *gin.Context, data any) {
 	result(c, http.StatusOK, SUCCESS, data, SuccessMsg, "")
 }
 

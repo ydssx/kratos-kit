@@ -27,7 +27,7 @@ type Webhook struct {
 // DingTalkMessage 定义钉钉消息的结构
 type DingTalkMessage struct {
 	MsgType string                 `json:"msgtype"`
-	Text    map[string]interface{} `json:"text"`
+	Text    map[string]any `json:"text"`
 }
 
 func NewWebhook(url string) *Webhook {
@@ -80,11 +80,11 @@ func (w *Webhook) sendDingDingMessage(message string) error {
 
 	msg := DingTalkMessage{
 		MsgType: "text",
-		Text: map[string]interface{}{
+		Text: map[string]any{
 			"content": message,
 		},
 	}
-	var result interface{}
+	var result any
 	err := http.NewRequest().Post(w.DingDingWebhook, msg, &result)
 	return err
 }

@@ -74,7 +74,7 @@ func WithEventType(t string) Option {
 	return func(e *Event) { e.eventType = t }
 }
 
-func NewEvent(ctx context.Context, payload interface{}, opts ...Option) (event.Event, error) {
+func NewEvent(ctx context.Context, payload any, opts ...Option) (event.Event, error) {
 	ev := newDefaultEvent(ctx)
 	for _, v := range opts {
 		v(ev)

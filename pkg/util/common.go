@@ -72,7 +72,7 @@ func IsChinese(str string) bool {
 	return reg.MatchString(str)
 }
 
-func ToMap(s interface{}) (m map[string]interface{}, err error) {
+func ToMap(s any) (m map[string]any, err error) {
 	return cast.ToStringMapE(s)
 }
 
@@ -122,7 +122,7 @@ func GenerateCode(length int) string {
 
 // CalculateChecksum 计算给定请求的校验和
 // 它将请求转换为字符串,计算 MD5 哈希,并将哈希转换为十六进制编码的字符串
-func CalculateChecksum(request interface{}) string {
+func CalculateChecksum(request any) string {
 	// 使用 json.Marshal 来序列化请求
 	data, err := json.Marshal(request)
 	if err != nil {
@@ -153,7 +153,7 @@ func CalculateChecksum(request interface{}) string {
 //	CompareRequests(r1, r3, r2) // true
 //	CompareRequests(r1, r2, r3, r3) // false
 //	CompareRequests(r1, r2, r3) // true
-func CompareRequests(requests ...interface{}) bool {
+func CompareRequests(requests ...any) bool {
 	if len(requests) <= 1 {
 		return true // No need to compare if there's only one request
 	}
@@ -217,7 +217,7 @@ func IsZeroStruct(s any) bool {
 //	SetDefaults(&MyStruct{})
 //	// MyStruct will be set to:
 //	MyStruct{Name: "John", Age: 30, Enabled: true}
-func SetDefaults(data interface{}) {
+func SetDefaults(data any) {
 	value := reflect.ValueOf(data).Elem()
 	typ := value.Type()
 
@@ -257,28 +257,28 @@ func GenerateRandomString(length int) string {
 	return string(result)
 }
 
-// ToString converts the given interface{} value to a string.
+// ToString converts the given any value to a string.
 // If the value cannot be converted to a string, an empty string is returned.
-func ToString(data interface{}) string {
+func ToString(data any) string {
 	return cast.ToString(data)
 }
 
-// ToJSON converts the given interface{} value to a JSON string.
-func ToJSON(data interface{}) string {
+// ToJSON converts the given any value to a JSON string.
+func ToJSON(data any) string {
 	jsonBytes, _ := json.Marshal(data)
 
 	return string(jsonBytes)
 }
 
-// ToInt converts the given interface{} value to an int.
+// ToInt converts the given any value to an int.
 // If the value cannot be converted to an int, 0 is returned.
-func ToInt(data interface{}) int {
+func ToInt(data any) int {
 	return cast.ToInt(data)
 }
 
-// ToFloat64 converts the given interface{} value to a float64.
+// ToFloat64 converts the given any value to a float64.
 // If the value cannot be converted to a float64, 0.0 is returned.
-func ToFloat64(data interface{}) float64 {
+func ToFloat64(data any) float64 {
 	return cast.ToFloat64(data)
 }
 

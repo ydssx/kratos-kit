@@ -70,7 +70,7 @@ type Logger struct {
 type Options struct {
 	webhookURL    string
 	enableWebhook bool
-	logInject     func(context.Context) []interface{}
+	logInject     func(context.Context) []any
 	callerSkip    int
 	level         string
 	logPath       string // 新增
@@ -88,7 +88,7 @@ type Option func(*Options)
 func defaultOptions() *Options {
 	return &Options{
 		enableWebhook: false,
-		logInject:     func(context.Context) []interface{} { return nil },
+		logInject:     func(context.Context) []any { return nil },
 		callerSkip:    1,
 		level:         "info",
 		logPath:       "./logs",
@@ -113,7 +113,7 @@ func NewLogger(zlog *zap.Logger, opts ...Option) *Logger {
 }
 
 // 优化 Log 方法,提取公共逻辑
-func (l *Logger) Log(level log.Level, keyvals ...interface{}) error {
+func (l *Logger) Log(level log.Level, keyvals ...any) error {
 	if len(keyvals) == 0 || len(keyvals)%2 != 0 {
 		l.Zlog.Warn("Keyvalues must appear in pairs", zap.Any("keyvalues", keyvals))
 		return fmt.Errorf("invalid keyvals length: %d", len(keyvals))
@@ -138,8 +138,8 @@ func (l *Logger) Log(level log.Level, keyvals ...interface{}) error {
 }
 
 // 提取处理日志字段的逻辑
-func (l *Logger) processLogFields(keyvals []interface{}) ([]zap.Field, []string, map[string]interface{}) {
-	kvMap := make(map[string]interface{}, len(keyvals)/2)
+func (l *Logger) processLogFields(keyvals []any) ([]zap.Field, []string, map[string]any) {
+	kvMap := make(map[string]any, len(keyvals)/2)
 	fields := make([]zap.Field, 0, len(keyvals)/2)
 	var stack []string
 
@@ -201,7 +201,7 @@ func getLevel(level string) zapcore.Level {
 }
 
 // 添加 webhook 相关方法
-func (l *Logger) sendWebhookMessage(ce *zapcore.CheckedEntry, kvMap map[string]interface{}, stack []string) {
+func (l *Logger) sendWebhookMessage(ce *zapcore.CheckedEntry, kvMap map[string]any, stack []string) {
 	msg := `环境：%s
 级别：%s
 时间：%s
@@ -227,7 +227,7 @@ caller：%s
 }
 
 // 添加提取堆栈的方法
-func (l *Logger) extractStack(value interface{}) []string {
+func (l *Logger) extractStack(value any) []string {
 	if v, ok := value.([]string); ok {
 		return v
 	}
@@ -242,7 +242,7 @@ func WithWebhook(url string) Option {
 	}
 }
 
-func WithLogInject(f func(context.Context) []interface{}) Option {
+func WithLogInject(f func(context.Context) []any) Option {
 	return func(o *Options) {
 		o.logInject = f
 	}

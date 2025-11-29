@@ -12,7 +12,7 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 )
 
-var LogInject = func(ctx context.Context) (data []interface{}) {
+var LogInject = func(ctx context.Context) (data []any) {
 	if traceID := kratos.TraceIDFromContext(ctx); traceID != "" {
 		data = append(data, constants.LogKeyTraceID, traceID)
 	}
@@ -28,7 +28,7 @@ var LogInject = func(ctx context.Context) (data []interface{}) {
 }
 
 // 优化日志方法,减少代码重复
-func logWithLevel(ctx context.Context, level log.Level, format string, args ...interface{}) {
+func logWithLevel(ctx context.Context, level log.Level, format string, args ...any) {
 	var msg string
 	if format == "" {
 		msg = fmt.Sprint(args...)
@@ -36,55 +36,55 @@ func logWithLevel(ctx context.Context, level log.Level, format string, args ...i
 		msg = fmt.Sprintf(format, args...)
 	}
 
-	kv := []interface{}{log.DefaultMessageKey, msg}
+	kv := []any{log.DefaultMessageKey, msg}
 	kv = append(kv, LogInject(ctx)...)
 	DefaultLogger.Log(level, kv...)
 }
 
 // 简化各个日志级别的方法
-func Info(ctx context.Context, args ...interface{}) {
+func Info(ctx context.Context, args ...any) {
 	logWithLevel(ctx, log.LevelInfo, "", args...)
 }
 
-func Infof(ctx context.Context, format string, args ...interface{}) {
+func Infof(ctx context.Context, format string, args ...any) {
 	logWithLevel(ctx, log.LevelInfo, format, args...)
 }
 
-func Error(ctx context.Context, args ...interface{}) {
+func Error(ctx context.Context, args ...any) {
 	logWithLevel(ctx, log.LevelError, "", args...)
 }
 
-func Errorf(ctx context.Context, format string, args ...interface{}) {
+func Errorf(ctx context.Context, format string, args ...any) {
 	logWithLevel(ctx, log.LevelError, format, args...)
 }
 
-func Fatalf(ctx context.Context, format string, args ...interface{}) {
+func Fatalf(ctx context.Context, format string, args ...any) {
 	logWithLevel(ctx, log.LevelFatal, format, args...)
 }
 
-func Fatal(ctx context.Context, args ...interface{}) {
+func Fatal(ctx context.Context, args ...any) {
 	logWithLevel(ctx, log.LevelFatal, "", args...)
 }
 
-func Log(ctx context.Context, level log.Level, msg string, keyvals ...interface{}) {
-	kv := []interface{}{log.DefaultMessageKey, msg}
+func Log(ctx context.Context, level log.Level, msg string, keyvals ...any) {
+	kv := []any{log.DefaultMessageKey, msg}
 	kv = append(kv, LogInject(ctx)...)
 	DefaultLogger.Log(level, append(kv, keyvals...)...)
 }
 
-func Debug(ctx context.Context, args ...interface{}) {
+func Debug(ctx context.Context, args ...any) {
 	logWithLevel(ctx, log.LevelDebug, "", args...)
 }
 
-func Debugf(ctx context.Context, format string, args ...interface{}) {
+func Debugf(ctx context.Context, format string, args ...any) {
 	logWithLevel(ctx, log.LevelDebug, format, args...)
 }
 
-func Warn(ctx context.Context, args ...interface{}) {
+func Warn(ctx context.Context, args ...any) {
 	logWithLevel(ctx, log.LevelWarn, "", args...)
 }
 
-func Warnf(ctx context.Context, format string, args ...interface{}) {
+func Warnf(ctx context.Context, format string, args ...any) {
 	logWithLevel(ctx, log.LevelWarn, format, args...)
 }
 
@@ -130,7 +130,7 @@ func (l *ContextLogger) WithError(err error) *ContextLogger {
 	return l.WithFields(zap.Error(err))
 }
 
-func (l *ContextLogger) WithValue(key string, value interface{}) *ContextLogger {
+func (l *ContextLogger) WithValue(key string, value any) *ContextLogger {
 	return l.WithFields(zap.Any(key, value))
 }
 
@@ -142,14 +142,14 @@ func WithError(err error) *Logger {
 	return DefaultLogger.WithFields(zap.Error(err))
 }
 
-func WithValue(key string, value interface{}) *Logger {
+func WithValue(key string, value any) *Logger {
 	return DefaultLogger.WithFields(zap.Any(key, value))
 }
 
 // 添加通用的日志字段处理方法
-func (l *ContextLogger) getLogFields(msg string, fields ...zap.Field) []interface{} {
+func (l *ContextLogger) getLogFields(msg string, fields ...zap.Field) []any {
 	data := l.logger.opts.logInject(l.ctx)
-	kv := []interface{}{log.DefaultMessageKey, msg}
+	kv := []any{log.DefaultMessageKey, msg}
 	kv = append(kv, data...)
 
 	// 处理额外的字段
@@ -161,19 +161,19 @@ func (l *ContextLogger) getLogFields(msg string, fields ...zap.Field) []interfac
 }
 
 // 添加带格式化的方法
-func (l *ContextLogger) Infof(format string, args ...interface{}) {
+func (l *ContextLogger) Infof(format string, args ...any) {
 	l.Info(fmt.Sprintf(format, args...))
 }
 
-func (l *ContextLogger) Errorf(format string, args ...interface{}) {
+func (l *ContextLogger) Errorf(format string, args ...any) {
 	l.Error(fmt.Sprintf(format, args...))
 }
 
-func (l *ContextLogger) Debugf(format string, args ...interface{}) {
+func (l *ContextLogger) Debugf(format string, args ...any) {
 	l.Debug(fmt.Sprintf(format, args...))
 }
 
-func (l *ContextLogger) Warnf(format string, args ...interface{}) {
+func (l *ContextLogger) Warnf(format string, args ...any) {
 	l.Warn(fmt.Sprintf(format, args...))
 }
 
@@ -190,7 +190,7 @@ func (l *ContextLogger) Fatal(msg string, fields ...zap.Field) {
 	l.logger.Log(log.LevelFatal, l.getLogFields(msg, fields...)...)
 }
 
-func (l *ContextLogger) Fatalf(format string, args ...interface{}) {
+func (l *ContextLogger) Fatalf(format string, args ...any) {
 	l.Fatal(fmt.Sprintf(format, args...))
 }
 

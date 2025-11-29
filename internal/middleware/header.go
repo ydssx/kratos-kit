@@ -31,7 +31,7 @@ type HeaderInfo struct {
 // LanguageMiddleware 提取请求头信息的中间件
 func LanguageMiddleware() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
-		return func(ctx context.Context, req interface{}) (interface{}, error) {
+		return func(ctx context.Context, req any) (any, error) {
 			tr, ok := transport.FromServerContext(ctx)
 			if !ok {
 				return handler(ctx, req)

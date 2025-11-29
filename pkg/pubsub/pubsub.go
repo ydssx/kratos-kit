@@ -11,7 +11,7 @@ type CloudEvent = cloudevents.Event
 type EventHandler func(ctx context.Context, event *CloudEvent) error
 
 type Publisher interface {
-	PublishMessage(ctx context.Context, subject string, payload interface{}, opts ...Option) error
+	PublishMessage(ctx context.Context, subject string, payload any, opts ...Option) error
 	Close() error
 }
 

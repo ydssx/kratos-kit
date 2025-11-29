@@ -10,22 +10,22 @@ import (
 type MemoryCache struct {
 	sync.Mutex
 	expirations sync.Map
-	data        map[string]interface{}
+	data        map[string]any
 }
 
 func NewMemoryCache() *MemoryCache {
-	return &MemoryCache{data: make(map[string]interface{})}
+	return &MemoryCache{data: make(map[string]any)}
 }
 
 // Get method retrieves a value from the cache, if it exists,
 // for a given key. The function locks the cache before
 // attempting to retrieve the value to avoid race conditions.
-// The returned value is of type interface{} as the cache
+// The returned value is of type any as the cache
 // can store any type of value. The second returned boolean
 // value indicates if the key was found in the cache or not.
 // If the retrieval was successful, the boolean return is 'true',
 // if not, it's 'false'.
-func (c *MemoryCache) Get(key string) (interface{}, bool) {
+func (c *MemoryCache) Get(key string) (any, bool) {
 	c.Lock()
 	defer c.Unlock()
 	value, ok := c.data[key]
@@ -45,14 +45,14 @@ func (c *MemoryCache) Delete(key string) {
 func (c *MemoryCache) Clear() {
 	c.Lock()
 	defer c.Unlock()
-	c.data = make(map[string]interface{})
+	c.data = make(map[string]any)
 }
 
 // Set stores the given value in the cache for the given key and expiration time.
 // It locks the cache during the set, and handles expiration by starting a goroutine
 // that will delete the key after the expiration time. If expiration is 0, it deletes
 // any existing expiration for the key.
-func (c *MemoryCache) Set(key string, value interface{}, expiration time.Duration) {
+func (c *MemoryCache) Set(key string, value any, expiration time.Duration) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -81,10 +81,10 @@ func (c *MemoryCache) Set(key string, value interface{}, expiration time.Duratio
 }
 
 // deepCopy makes a deep copy of the given value using gob encoding/decoding.
-// It encodes the value to a bytes buffer, decodes it back to an interface{},
+// It encodes the value to a bytes buffer, decodes it back to an any,
 // and returns the decoded value. This creates a deep copy by value instead of
 // just copying a reference.
-func (c *MemoryCache) deepCopy(value interface{}) interface{} {
+func (c *MemoryCache) deepCopy(value any) any {
 	buffer := new(bytes.Buffer)
 	encoder := gob.NewEncoder(buffer)
 	decoder := gob.NewDecoder(buffer)
@@ -93,7 +93,7 @@ func (c *MemoryCache) deepCopy(value interface{}) interface{} {
 	encoder.Encode(value)
 
 	// 解码 value 的副本
-	var copiedValue interface{}
+	var copiedValue any
 	decoder.Decode(&copiedValue)
 
 	return copiedValue

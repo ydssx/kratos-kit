@@ -61,9 +61,9 @@ func (s *WsService) RemoveConn(id string) {
 
 func (s *WsService) NotifyClients(messageType int, data []byte) {
 	var wg sync.WaitGroup
-	s.conns.Range(func(key, value interface{}) bool {
+	s.conns.Range(func(key, value any) bool {
 		wg.Add(1)
-		go func(key interface{}, client *websocket.Conn) {
+		go func(key any, client *websocket.Conn) {
 			defer wg.Done()
 			if err := client.WriteMessage(messageType, data); err != nil {
 				s.logger.Errorf("发送消息失败: %v", err)
@@ -75,14 +75,14 @@ func (s *WsService) NotifyClients(messageType int, data []byte) {
 	wg.Wait()
 }
 
-func (s *WsService) NotifyUser(userId string, messageType string, data interface{}) {
+func (s *WsService) NotifyUser(userId string, messageType string, data any) {
 	if conn, ok := s.conns.Load(userId); ok {
 		client := conn.(*websocket.Conn)
 
 		// 构造消息
 		message := struct {
 			Type string      `json:"type"`
-			Data interface{} `json:"data"`
+			Data any `json:"data"`
 		}{
 			Type: messageType,
 			Data: data,
@@ -172,7 +172,7 @@ func (ws *WsService) writePump() {
 }
 
 func (ws *WsService) broadcastMessage(message []byte) {
-	ws.conns.Range(func(_, value interface{}) bool {
+	ws.conns.Range(func(_, value any) bool {
 		client := value.(*websocket.Conn)
 		err := client.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
@@ -185,7 +185,7 @@ func (ws *WsService) broadcastMessage(message []byte) {
 func (ws *WsService) gracefulShutdown(ctx context.Context) {
 	context.AfterFunc(ctx, func() {
 		close(ws.stop)
-		ws.conns.Range(func(_, value interface{}) bool {
+		ws.conns.Range(func(_, value any) bool {
 			client := value.(*websocket.Conn)
 			closeMsg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "服务正在关闭")
 			_ = client.WriteControl(websocket.CloseMessage, closeMsg, time.Now().Add(writeWait))

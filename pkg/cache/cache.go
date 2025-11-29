@@ -10,9 +10,9 @@ import (
 
 type Cache interface {
 	// Get 从缓存中获取指定key的值,并反序列化到result中
-	Get(ctx context.Context, key string, result interface{}) error
+	Get(ctx context.Context, key string, result any) error
 	// Set 将指定的key/value对设置到缓存中,并设置过期时间
-	Set(ctx context.Context, key string, value interface{}, expire time.Duration) error
+	Set(ctx context.Context, key string, value any, expire time.Duration) error
 	// Delete 从缓存中删除指定key的值
 	Delete(ctx context.Context, key string) error
 	// Clear 清空缓存中的所有键值对
@@ -30,7 +30,7 @@ func WithCache[T any](c Cache, ctx context.Context, key string, duration time.Du
 	}
 
 	// 使用singleflight防止缓存击穿
-	v, err, _ := g.Do(key, func() (interface{}, error) {
+	v, err, _ := g.Do(key, func() (any, error) {
 		var data T
 		if err := c.Get(ctx, key, &data); err == nil {
 			return data, nil

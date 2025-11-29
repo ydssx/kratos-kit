@@ -11,7 +11,7 @@ import (
 // Client represents a connected SSE client
 type Client struct {
 	ID           string
-	Messages     chan interface{}
+	Messages     chan any
 	Disconnected chan struct{}
 	writer       http.ResponseWriter
 	flusher      http.Flusher
@@ -24,7 +24,7 @@ type Broker struct {
 	mu         sync.RWMutex
 	register   chan *Client
 	unregister chan *Client
-	events     chan interface{}
+	events     chan any
 }
 
 // NewBroker creates a new SSE broker
@@ -33,7 +33,7 @@ func NewBroker() *Broker {
 		clients:    make(map[string]*Client),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		events:     make(chan interface{}, 100),
+		events:     make(chan any, 100),
 	}
 }
 
@@ -72,7 +72,7 @@ func (b *Broker) Start(ctx context.Context) {
 }
 
 // broadcast sends a message to all connected clients
-func (b *Broker) broadcast(event interface{}) {
+func (b *Broker) broadcast(event any) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -100,7 +100,7 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	client := &Client{
 		ID:           r.RemoteAddr,
-		Messages:     make(chan interface{}, 100),
+		Messages:     make(chan any, 100),
 		Disconnected: make(chan struct{}),
 		writer:       w,
 		flusher:      flusher,
@@ -131,7 +131,7 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Send sends a message to the client
-func (c *Client) Send(event interface{}) error {
+func (c *Client) Send(event any) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -146,6 +146,6 @@ func (c *Client) Send(event interface{}) error {
 }
 
 // Publish sends an event to all connected clients
-func (b *Broker) Publish(event interface{}) {
+func (b *Broker) Publish(event any) {
 	b.events <- event
 }

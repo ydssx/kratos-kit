@@ -30,7 +30,7 @@ const (
 // AuthServer 返回认证中间件
 func AuthServer(geoip *geoip2.Reader) middleware.Middleware {
 	return func(h middleware.Handler) middleware.Handler {
-		return func(ctx context.Context, req interface{}) (interface{}, error) {
+		return func(ctx context.Context, req any) (any, error) {
 			claims, err := handleAuth(ctx, geoip)
 			if err != nil {
 				return nil, err
@@ -283,7 +283,7 @@ func GetClaims(ctx context.Context) *jwt.Claims {
 // AuthAdmin 管理员认证中间件
 func AuthAdmin() middleware.Middleware {
 	return func(h middleware.Handler) middleware.Handler {
-		return func(ctx context.Context, req interface{}) (interface{}, error) {
+		return func(ctx context.Context, req any) (any, error) {
 			tr, ok := transport.FromServerContext(ctx)
 			if !ok {
 				return nil, errors.Forbidden("forbidden", "no token")

@@ -35,7 +35,7 @@ func NewUploadUseCase(store storage.Storage, conf *conf.Bootstrap, commonUc *Com
 }
 
 // UploadFile 上传文件
-func (uc *UploadUseCase) UploadFile(c *gin.Context, userID int, file *multipart.FileHeader) (data interface{}, errInfo error) {
+func (uc *UploadUseCase) UploadFile(c *gin.Context, userID int, file *multipart.FileHeader) (data any, errInfo error) {
 	result := new(UploadResult)
 
 	userType := c.GetInt("user_type")

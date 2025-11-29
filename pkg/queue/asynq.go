@@ -100,7 +100,7 @@ func (c *Server) Close() error {
 // Task represents an async task
 type Task struct {
 	TypeName string
-	Payload  interface{}
+	Payload  any
 }
 
 // HandleFunc represents a task handler function

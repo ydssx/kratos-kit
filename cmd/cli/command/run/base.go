@@ -61,7 +61,7 @@ func NewClientSet(ctx context.Context) *ClientSet {
 
 func authClient(tokenStr string) middleware.Middleware {
 	return func(h middleware.Handler) middleware.Handler {
-		return func(ctx context.Context, req interface{}) (interface{}, error) {
+		return func(ctx context.Context, req any) (any, error) {
 			if clientContext, ok := transport.FromClientContext(ctx); ok {
 				clientContext.RequestHeader().Set("Authorization", fmt.Sprintf("Bearer %s", tokenStr))
 				return h(ctx, req)

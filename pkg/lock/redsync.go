@@ -142,7 +142,7 @@ func (r *RedisSync) newMutex(opt []LockerOption, key string) *redsync.Mutex {
 
 // Cleanup 清理过期的锁
 func (r *RedisSync) Cleanup() {
-	r.mutexMap.Range(func(key, value interface{}) bool {
+	r.mutexMap.Range(func(key, value any) bool {
 		if m, ok := value.(*redsync.Mutex); ok {
 			// 尝试解锁,忽略错误
 			_, _ = m.Unlock()

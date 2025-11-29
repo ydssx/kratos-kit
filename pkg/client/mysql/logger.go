@@ -60,21 +60,21 @@ func (g GormLogger) CtxLogger(ctx context.Context) *zap.Logger {
 }
 
 // Info 实现 gorm logger 接口方法
-func (g GormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
+func (g GormLogger) Info(ctx context.Context, msg string, data ...any) {
 	if g.logLevel <= zap.InfoLevel {
 		g.CtxLogger(ctx).Sugar().Infof(msg, data...)
 	}
 }
 
 // Warn 实现 gorm logger 接口方法
-func (g GormLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
+func (g GormLogger) Warn(ctx context.Context, msg string, data ...any) {
 	if g.logLevel <= zap.WarnLevel {
 		g.CtxLogger(ctx).Sugar().Warnf(msg, data...)
 	}
 }
 
 // Error 实现 gorm logger 接口方法
-func (g GormLogger) Error(ctx context.Context, msg string, data ...interface{}) {
+func (g GormLogger) Error(ctx context.Context, msg string, data ...any) {
 	if g.logLevel <= zap.ErrorLevel {
 		g.CtxLogger(ctx).Sugar().Errorf(msg, data...)
 	}

@@ -9,7 +9,7 @@ import (
 
 func Timeout(timeout time.Duration) middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
-		return func(ctx context.Context, req interface{}) (interface{}, error) {
+		return func(ctx context.Context, req any) (any, error) {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
@@ -20,7 +20,7 @@ func Timeout(timeout time.Duration) middleware.Middleware {
 
 			// 创建一个 channel 用于捕获 handler 的响应
 			done := make(chan struct{})
-			var resp interface{}
+			var resp any
 			var err error
 
 			// 启动一个 goroutine 来执行 handler

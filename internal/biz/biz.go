@@ -69,9 +69,9 @@ type Transaction interface {
 // IdempotencyChecker 幂等性校验
 type IdempotencyChecker interface {
 	// IsIdempotent 检查请求是否幂等
-	IsIdempotent(ctx context.Context, uid int, req interface{}) (bool, error)
+	IsIdempotent(ctx context.Context, uid int, req any) (bool, error)
 	// MarkIdempotent 标记请求为幂等
-	MarkIdempotent(ctx context.Context, uid int, req interface{}) error
+	MarkIdempotent(ctx context.Context, uid int, req any) error
 }
 
 type (
@@ -79,7 +79,7 @@ type (
 		// CreateUser 创建用户
 		CreateUser(ctx context.Context, user *models.User) (userId int, err error)
 		// UpdateUser 更新用户
-		UpdateUser(ctx context.Context, userId int, user interface{}) error
+		UpdateUser(ctx context.Context, userId int, user any) error
 		// UpdateUserByID 根据ID更新用户
 		UpdateUserByID(ctx context.Context, uid int, user *models.User) error
 		// ListUser 获取用户列表

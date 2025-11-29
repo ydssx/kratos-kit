@@ -19,7 +19,7 @@ import (
 // TraceServer 返回一个跟踪中间件
 func TraceServer() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
-		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
+		return func(ctx context.Context, req any) (reply any, err error) {
 			// 初始化跟踪上下文
 			ctx, operation := initTraceContext(ctx)
 			startTime := time.Now()
@@ -68,7 +68,7 @@ func initTraceContext(ctx context.Context) (context.Context, string) {
 }
 
 // logRequest 记录请求日志
-func logRequest(ctx context.Context, operation string, req interface{}) {
+func logRequest(ctx context.Context, operation string, req any) {
 	klog := log.Context(ctx)
 	klog.Log(log.LevelInfo,
 		"event", "request_received",
@@ -129,7 +129,7 @@ func extractErrorInfo(err error) (code int32, reason string) {
 }
 
 // extractArgs 提取请求参数
-func extractArgs(req interface{}) string {
+func extractArgs(req any) string {
 	if stringer, ok := req.(fmt.Stringer); ok {
 		return stringer.String()
 	}

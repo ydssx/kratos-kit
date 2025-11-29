@@ -14,7 +14,7 @@ type validator interface {
 
 func Validator() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
-		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
+		return func(ctx context.Context, req any) (reply any, err error) {
 			if v, ok := req.(validator); ok {
 				if err := v.ValidateAll(); err != nil {
 					tr, ok := transport.FromServerContext(ctx)
