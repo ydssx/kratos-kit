@@ -47,6 +47,7 @@ func (c *RedisCache) Set(ctx context.Context, key string, value any, expire time
 		return errors.Wrap(err, "marshal value error")
 	}
 
+	// 添加随机过期时间防止缓存雪崩，随机范围为原过期时间的10%
 	randomExpire := expire + time.Duration(rand.Int63n(int64(expire/10)))
 	if expire == 0 {
 		randomExpire = 0

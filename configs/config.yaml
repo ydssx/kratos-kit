@@ -4,6 +4,24 @@ server:
   http:
     addr: 0.0.0.0:9000
     timeout: 30s
+    # 安全配置
+    jwt_secret: "${JWT_SECRET:your-secret-key-here}" # JWT密钥，从环境变量获取
+    jwt_expiry: 24h # JWT过期时间
+    rate_limit: 100 # 每秒请求限制
+    rate_burst: 200 # 突发请求限制
+    allow_origins: # CORS允许的源
+      - "http://localhost:3000"
+      - "https://your-frontend-domain.com"
+    auth:
+      username: admin # 基本认证用户名
+      password: "${ADMIN_PASSWORD:change-this-password}" # 基本认证密码，从环境变量获取
+    security:
+      enable_csrf: true # 启用CSRF保护
+      enable_xss: true # 启用XSS保护
+      enable_security_headers: true # 启用安全响应头
+      csrf_exclude_paths: # CSRF排除路径
+        - "/api/v1/webhook"
+        - "/api/v1/callback"
   grpc:
     addr: 0.0.0.0:9001
     timeout: 30s
@@ -11,16 +29,30 @@ server:
 data:
   database:
     driver: mysql
-    source: 
-      - root:123456@tcp(127.0.0.1:3306)/?parseTime=true&loc=Local
+    source:
+      - "${DB_USER:root}:${DB_PASSWORD:123456}@tcp(${DB_HOST:127.0.0.1}:${DB_PORT:3306})/${DB_NAME:}?parseTime=true&loc=Local"
+    # 数据库安全配置
+    max_open_conns: 100
+    max_idle_conns: 10
+    conn_max_lifetime: 1h
+    enable_ssl: false
+    ssl_ca: ""
+    ssl_cert: ""
+    ssl_key: ""
   redis:
-    addr: 127.0.0.1:6379
-    username:
-    password: 
+    addr: "${REDIS_HOST:127.0.0.1}:${REDIS_PORT:6379}"
+    username: "${REDIS_USERNAME:}"
+    password: "${REDIS_PASSWORD:}"
     read_timeout: 2s
     write_timeout: 2s
     dial_timeout: 5s
-    db : 2
+    db: 2
+    # Redis安全配置
+    enable_tls: false
+    tls_skip_verify: false
+    max_retries: 3
+    min_retry_backoff: 8ms
+    max_retry_backoff: 512ms
   geoip:
     path: ./data/geoip/GeoLite2-City.mmdb
 
@@ -38,20 +70,19 @@ asynq:
   max_retry: 3
   strict_priority: true
 
-
 webhook:
-  url: 
+  url:
 
 # Google Cloud Storage
 gcs:
-  bucket_name: 
-  project_id: 
-  credentials_file: 
+  bucket_name:
+  project_id:
+  credentials_file:
 
 aes:
-  key: 
+  key:
 
 google:
-  client_id: 
-  client_secret: 
-  redirect_url: 
+  client_id:
+  client_secret:
+  redirect_url:

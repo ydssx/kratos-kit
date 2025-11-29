@@ -738,6 +738,213 @@ var _ interface {
 	ErrorName() string
 } = ServerValidationError{}
 
+// Validate checks the field values on Auth with the rules defined in the proto
+// definition for this message. If any rules are violated, the first error
+// encountered is returned, or nil if there are no violations.
+func (m *Auth) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Auth with the rules defined in the
+// proto definition for this message. If any rules are violated, the result is
+// a list of violation errors wrapped in AuthMultiError, or nil if none found.
+func (m *Auth) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Auth) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Username
+
+	// no validation rules for Password
+
+	if len(errors) > 0 {
+		return AuthMultiError(errors)
+	}
+
+	return nil
+}
+
+// AuthMultiError is an error wrapping multiple validation errors returned by
+// Auth.ValidateAll() if the designated constraints aren't met.
+type AuthMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m AuthMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m AuthMultiError) AllErrors() []error { return m }
+
+// AuthValidationError is the validation error returned by Auth.Validate if the
+// designated constraints aren't met.
+type AuthValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e AuthValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e AuthValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e AuthValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e AuthValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e AuthValidationError) ErrorName() string { return "AuthValidationError" }
+
+// Error satisfies the builtin error interface
+func (e AuthValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sAuth.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = AuthValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = AuthValidationError{}
+
+// Validate checks the field values on Security with the rules defined in the
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *Security) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Security with the rules defined in
+// the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in SecurityMultiError, or nil
+// if none found.
+func (m *Security) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Security) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for EnableCsrf
+
+	// no validation rules for EnableXss
+
+	// no validation rules for EnableSecurityHeaders
+
+	if len(errors) > 0 {
+		return SecurityMultiError(errors)
+	}
+
+	return nil
+}
+
+// SecurityMultiError is an error wrapping multiple validation errors returned
+// by Security.ValidateAll() if the designated constraints aren't met.
+type SecurityMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m SecurityMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m SecurityMultiError) AllErrors() []error { return m }
+
+// SecurityValidationError is the validation error returned by
+// Security.Validate if the designated constraints aren't met.
+type SecurityValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e SecurityValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e SecurityValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e SecurityValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e SecurityValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e SecurityValidationError) ErrorName() string { return "SecurityValidationError" }
+
+// Error satisfies the builtin error interface
+func (e SecurityValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sSecurity.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = SecurityValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = SecurityValidationError{}
+
 // Validate checks the field values on Data with the rules defined in the proto
 // definition for this message. If any rules are violated, the first error
 // encountered is returned, or nil if there are no violations.
@@ -1125,6 +1332,70 @@ func (m *Redis) validate(all bool) error {
 	}
 
 	// no validation rules for Db
+
+	// no validation rules for EnableTls
+
+	// no validation rules for TlsSkipVerify
+
+	// no validation rules for MaxRetries
+
+	if all {
+		switch v := interface{}(m.GetMinRetryBackoff()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, RedisValidationError{
+					field:  "MinRetryBackoff",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, RedisValidationError{
+					field:  "MinRetryBackoff",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetMinRetryBackoff()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return RedisValidationError{
+				field:  "MinRetryBackoff",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetMaxRetryBackoff()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, RedisValidationError{
+					field:  "MaxRetryBackoff",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, RedisValidationError{
+					field:  "MaxRetryBackoff",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetMaxRetryBackoff()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return RedisValidationError{
+				field:  "MaxRetryBackoff",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
 
 	if len(errors) > 0 {
 		return RedisMultiError(errors)
@@ -2502,6 +2773,99 @@ func (m *Server_HTTP) validate(all bool) error {
 		}
 	}
 
+	// no validation rules for JwtSecret
+
+	if all {
+		switch v := interface{}(m.GetJwtExpiry()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, Server_HTTPValidationError{
+					field:  "JwtExpiry",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, Server_HTTPValidationError{
+					field:  "JwtExpiry",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetJwtExpiry()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return Server_HTTPValidationError{
+				field:  "JwtExpiry",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for RateLimit
+
+	// no validation rules for RateBurst
+
+	if all {
+		switch v := interface{}(m.GetAuth()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, Server_HTTPValidationError{
+					field:  "Auth",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, Server_HTTPValidationError{
+					field:  "Auth",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetAuth()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return Server_HTTPValidationError{
+				field:  "Auth",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetSecurity()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, Server_HTTPValidationError{
+					field:  "Security",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, Server_HTTPValidationError{
+					field:  "Security",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetSecurity()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return Server_HTTPValidationError{
+				field:  "Security",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return Server_HTTPMultiError(errors)
 	}
@@ -2734,6 +3098,47 @@ func (m *Data_Database) validate(all bool) error {
 	var errors []error
 
 	// no validation rules for Driver
+
+	// no validation rules for MaxOpenConns
+
+	// no validation rules for MaxIdleConns
+
+	if all {
+		switch v := interface{}(m.GetConnMaxLifetime()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, Data_DatabaseValidationError{
+					field:  "ConnMaxLifetime",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, Data_DatabaseValidationError{
+					field:  "ConnMaxLifetime",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetConnMaxLifetime()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return Data_DatabaseValidationError{
+				field:  "ConnMaxLifetime",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for EnableSsl
+
+	// no validation rules for SslCa
+
+	// no validation rules for SslCert
+
+	// no validation rules for SslKey
 
 	if len(errors) > 0 {
 		return Data_DatabaseMultiError(errors)

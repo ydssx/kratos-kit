@@ -28,6 +28,9 @@ import (
 	"github.com/ydssx/kratos-kit/internal/service"
 	"github.com/ydssx/kratos-kit/pkg/errors"
 	"github.com/ydssx/kratos-kit/pkg/limit"
+	"github.com/ydssx/kratos-kit/pkg/middleware/auth"
+	securitymw "github.com/ydssx/kratos-kit/pkg/middleware/security"
+	validatormw "github.com/ydssx/kratos-kit/pkg/middleware/validator"
 	"github.com/ydssx/kratos-kit/pkg/sse"
 	"github.com/ydssx/kratos-kit/pkg/util"
 	"google.golang.org/grpc/codes"
@@ -45,10 +48,15 @@ const (
 
 // HTTPServerConfig HTTP服务器配置
 type HTTPServerConfig struct {
-	Addr     string
-	Timeout  time.Duration
-	Username string
-	Password string
+	Addr         string
+	Timeout      time.Duration
+	Username     string
+	Password     string
+	JWTSecret    string        // JWT密钥
+	JWTExpiry    time.Duration // JWT过期时间
+	RateLimit    float64       // 请求速率限制
+	RateBurst    int          // 速率限制突发值
+	AllowOrigins []string     // CORS允许的源
 }
 
 // NewHTTPServer 创建HTTP服务器
@@ -87,8 +95,20 @@ func buildServerOptions(cfg HTTPServerConfig, geoip *geoip2.Reader, limiter limi
 	opts := []khttp.ServerOption{
 		khttp.Middleware(
 			recovery.Recovery(),
+			// 安全相关中间件
+			securitymw.SecurityHeaders(),
+			securitymw.RateLimiter(cfg.RateLimit, cfg.RateBurst),
+			securitymw.CSRF(),
+			securitymw.XSS(),
+			// 验证相关中间件
+			validatormw.Validator(),
+			validatormw.SQLInjectionValidator(),
+			validatormw.PathTraversalValidator(),
+			validatormw.CommandInjectionValidator(),
+			// 认证和授权中间件
+			selector.Server(auth.JWTAuth(cfg.JWTSecret, []string{"/health", "/metrics", "/monitor"})).Match(newWhiteListMatcher()).Build(),
+			// 其他中间件
 			middleware.RateLimit(limiter),
-			middleware.Validator(),
 			middleware.TraceServer(),
 			selector.Server(middleware.AuthServer(geoip)).Match(newWhiteListMatcher()).Build(),
 			middleware.LanguageMiddleware(),
@@ -370,10 +390,15 @@ func getHTTPConfig(c *conf.Bootstrap) HTTPServerConfig {
 		password = "admin"
 	}
 	return HTTPServerConfig{
-		Addr:     c.Server.Http.Addr,
-		Timeout:  timeout,
-		Username: username,
-		Password: password,
+		Addr:         c.Server.Http.Addr,
+		Timeout:      timeout,
+		Username:     "admin", // 可以从配置文件读取
+		Password:     "admin",
+		JWTSecret:    c.Server.Http.JwtSecret,
+		JWTExpiry:    c.Server.Http.JwtExpiry.AsDuration(),
+		RateLimit:    float64(c.Server.Http.RateLimit),
+		RateBurst:    int(c.Server.Http.RateBurst),
+		AllowOrigins: c.Server.Http.AllowOrigins,
 	}
 }
 

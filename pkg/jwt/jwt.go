@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -15,23 +16,18 @@ var (
 	ErrInvalidToken = errors.New("invalid token")
 	ErrExpiredToken = errors.New("token has expired")
 	ErrTokenFormat  = errors.New("malformed token")
+	SecretKey       = getSecretKey()      // 从环境变量获取秘钥
+	ExpireDuration  = time.Hour * 24 * 30 // 过期时间
 )
 
-// Claims 定义JWT的声明结构
-type Claims struct {
-	Uid         int64          `json:"uid"`
-	Username    string         `json:"username"`
-	UserRole    string         `json:"user_role"`
-	TokenType   string         `json:"token_type"` // access 或 refresh
-	Type        string         `json:"type"`
-	ClientIP    string         `json:"client_ip"`
-	CountryCode string         `json:"country_code"`
-	Country     string         `json:"country"`
-	City        string         `json:"city"`
-	ZipCode     string         `json:"zip_code"`
-	Uuid        string         `json:"uuid"`
-	Metadata    map[string]any `json:"metadata,omitempty"`
-	jwt.RegisteredClaims
+// getSecretKey 从环境变量获取JWT密钥，如果未设置则使用默认值
+func getSecretKey() []byte {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		// 生产环境应该设置环境变量，这里使用默认值仅用于开发
+		secret = "your-super-secret-jwt-key-change-in-production"
+	}
+	return []byte(secret)
 }
 
 // Config JWT配置
@@ -76,10 +72,9 @@ func (m *Manager) GenerateTokenPair(userID int64, username, role string) (access
 func (m *Manager) generateToken(userID int64, username, role, tokenType, secret string, expiration time.Duration) (string, error) {
 	now := time.Now()
 	claims := Claims{
-		Uid:       userID,
-		Username:  username,
-		UserRole:  role,
-		TokenType: tokenType,
+		Uid:      userID,
+		Username: username,
+		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiration)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -121,34 +116,7 @@ func (m *Manager) ParseToken(tokenString, tokenType string) (*Claims, error) {
 		return nil, ErrInvalidToken
 	}
 
-	if claims.TokenType != tokenType {
-		return nil, fmt.Errorf("invalid token type: expected %s, got %s", tokenType, claims.TokenType)
-	}
-
 	return claims, nil
-}
-
-// RefreshToken 使用刷新令牌生成新的访问令牌
-func (m *Manager) RefreshToken(refreshToken string) (string, error) {
-	claims, err := m.ParseToken(refreshToken, "refresh")
-	if err != nil {
-		return "", fmt.Errorf("parse refresh token: %w", err)
-	}
-
-	// 生成新的访问令牌
-	newAccessToken, err := m.generateToken(
-		claims.Uid,
-		claims.Username,
-		claims.UserRole,
-		"access",
-		m.config.AccessSecret,
-		m.config.AccessTokenDuration,
-	)
-	if err != nil {
-		return "", fmt.Errorf("generate new access token: %w", err)
-	}
-
-	return newAccessToken, nil
 }
 
 // ValidateAccessToken 验证访问令牌
@@ -164,25 +132,86 @@ func ExtractTokenFromHeader(authHeader string) (string, error) {
 	return authHeader[7:], nil
 }
 
-type GoogleClaims struct {
+type Claims struct {
+	Uid         int64  `json:"uid"`
+	Username    string `json:"username"`
+	Role        string `json:"role"`
+	ClientIP    string `json:"client_ip"`
+	Type        int    `json:"type"`
+	CountryCode string `json:"country_code"`
+	Country     string `json:"country"`
+	City        string `json:"city"`
+	ZipCode     string `json:"zip_code"`
+	SiteId      int    `json:"site_id"`
+	IsAdUser    bool   `json:"is_ad_user"`
+	Uuid        string `json:"uuid"`
+	jwt.RegisteredClaims
+}
+
+// GenerateToken 生成一个包含uid、用户名、角色信息的JWT token。
+// uid是用户ID。username是用户名。role是用户角色。
+// 它会设置token的过期时间为ExpireDuration。签名方法为HS256。
+func GenerateToken(uid int64, username, role string, utype int) (string, error) {
+	claims := &Claims{
+		Uid:      uid,
+		Username: username,
+		Role:     role,
+		Type:     utype,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ExpireDuration)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    "my_app",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(SecretKey)
+}
+
+// VerifyToken 验证JWT token是否有效。
+// tokenString是要验证的token字符串。
+// 它会解析token,验证签名和过期时间。
+// 如果验证成功,返回Claims信息,否则返回错误。
+func VerifyToken(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return SecretKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, jwt.ErrInvalidKey
+	}
+
+	return claims, nil
+}
+
+// JWTClaims 用于存储JWT的声明
+type JWTClaims struct {
 	Header  map[string]any
 	Payload map[string]any
 }
 
-func DecodeJWT(tokenString string) (*GoogleClaims, error) {
+// DecodeJWT 解码JWT token并返回其声明
+func DecodeJWT(tokenString string) (*JWTClaims, error) {
 	parts := strings.Split(tokenString, ".")
 	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid JWT format")
+		return nil, fmt.Errorf("无效的 JWT 格式")
 	}
+
 	header, err := decodeSegment(parts[0])
 	if err != nil {
-		return nil, fmt.Errorf("decode header: %w", err)
+		return nil, fmt.Errorf("解码头部失败: %v", err)
 	}
+
 	payload, err := decodeSegment(parts[1])
 	if err != nil {
-		return nil, fmt.Errorf("decode payload: %w", err)
+		return nil, fmt.Errorf("解码载荷失败: %v", err)
 	}
-	return &GoogleClaims{
+
+	return &JWTClaims{
 		Header:  header,
 		Payload: payload,
 	}, nil
@@ -192,6 +221,7 @@ func decodeSegment(seg string) (map[string]any, error) {
 	if l := len(seg) % 4; l > 0 {
 		seg += strings.Repeat("=", 4-l)
 	}
+
 	bytes, err := base64.URLEncoding.DecodeString(seg)
 	if err != nil {
 		return nil, err
@@ -201,5 +231,6 @@ func decodeSegment(seg string) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return data, nil
 }
