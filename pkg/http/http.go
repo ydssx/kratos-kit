@@ -10,10 +10,10 @@ import (
 )
 
 type HttpClient interface {
-	Get(url string, result interface{}) error
-	Post(url string, payload interface{}, result interface{}) error
-	Put(url string, payload interface{}, result interface{}) error
-	Delete(url string, result interface{}) error
+	Get(url string, result any) error
+	Post(url string, payload any, result any) error
+	Put(url string, payload any, result any) error
+	Delete(url string, result any) error
 }
 
 // Request represents a HTTP request
@@ -94,33 +94,33 @@ func (r *Request) WithContentType(contentType string) *Request {
 }
 
 // Get 执行 GET 请求
-func (r *Request) Get(url string, result interface{}) error {
+func (r *Request) Get(url string, result any) error {
 	return r.doRequest("GET", url, nil, result)
 }
 
 // Post 执行 POST 请求
-func (r *Request) Post(url string, payload interface{}, result interface{},) error {
+func (r *Request) Post(url string, payload any, result any) error {
 	return r.doRequest("POST", url, payload, result)
 }
 
 // Put 执行 PUT 请求
-func (r *Request) Put(url string, payload interface{}, result interface{}) error {
+func (r *Request) Put(url string, payload any, result any) error {
 	return r.doRequest("PUT", url, payload, result)
 }
 
-// Delete sends a DELETE request to the specified URL with the given result interface{} and handles the response.
+// Delete sends a DELETE request to the specified URL with the given result any and handles the response.
 //
 //   - url: The URL to send the DELETE request to.
 //   - result: A pointer to the variable where the response will be stored.
 //
 // Returns:
 //   - error: An error if there was a problem sending the request or handling the response.
-func (r *Request) Delete(url string, result interface{}) error {
+func (r *Request) Delete(url string, result any) error {
 	return r.doRequest("DELETE", url, nil, result)
 }
 
 // doRequest 执行 HTTP 请求
-func (r *Request) doRequest(method, url string, payload interface{}, result interface{}) error {
+func (r *Request) doRequest(method, url string, payload any, result any) error {
 	req := r.client.R()
 	r.addHeaders(req)
 	r.addQueryParams(req)
@@ -158,7 +158,7 @@ func (r *Request) setContentType(req *resty.Request) {
 }
 
 // handleResponse 处理 HTTP 响应
-func (r *Request) handleResponse(resp *resty.Response, result interface{}) error {
+func (r *Request) handleResponse(resp *resty.Response, result any) error {
 	if resp.StatusCode() >= http.StatusBadRequest {
 		return fmt.Errorf("请求失败，状态码：%d，响应体：%s", resp.StatusCode(), resp.String())
 	}

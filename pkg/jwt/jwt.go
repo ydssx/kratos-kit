@@ -19,18 +19,18 @@ var (
 
 // Claims 定义JWT的声明结构
 type Claims struct {
-	Uid         int64                  `json:"uid"`
-	Username    string                 `json:"username"`
-	UserRole    string                 `json:"user_role"`
-	TokenType   string                 `json:"token_type"` // access 或 refresh
-	Type        string                 `json:"type"`
-	ClientIP    string                 `json:"client_ip"`
-	CountryCode string                 `json:"country_code"`
-	Country     string                 `json:"country"`
-	City        string                 `json:"city"`
-	ZipCode     string                 `json:"zip_code"`
-	Uuid        string                 `json:"uuid"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Uid         int64          `json:"uid"`
+	Username    string         `json:"username"`
+	UserRole    string         `json:"user_role"`
+	TokenType   string         `json:"token_type"` // access 或 refresh
+	Type        string         `json:"type"`
+	ClientIP    string         `json:"client_ip"`
+	CountryCode string         `json:"country_code"`
+	Country     string         `json:"country"`
+	City        string         `json:"city"`
+	ZipCode     string         `json:"zip_code"`
+	Uuid        string         `json:"uuid"`
+	Metadata    map[string]any `json:"metadata,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -103,7 +103,7 @@ func (m *Manager) ParseToken(tokenString, tokenType string) (*Claims, error) {
 		return nil, fmt.Errorf("unknown token type: %s", tokenType)
 	}
 
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -165,8 +165,8 @@ func ExtractTokenFromHeader(authHeader string) (string, error) {
 }
 
 type GoogleClaims struct {
-	Header  map[string]interface{}
-	Payload map[string]interface{}
+	Header  map[string]any
+	Payload map[string]any
 }
 
 func DecodeJWT(tokenString string) (*GoogleClaims, error) {
@@ -188,7 +188,7 @@ func DecodeJWT(tokenString string) (*GoogleClaims, error) {
 	}, nil
 }
 
-func decodeSegment(seg string) (map[string]interface{}, error) {
+func decodeSegment(seg string) (map[string]any, error) {
 	if l := len(seg) % 4; l > 0 {
 		seg += strings.Repeat("=", 4-l)
 	}
@@ -196,7 +196,7 @@ func decodeSegment(seg string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	var data map[string]interface{}
+	var data map[string]any
 	err = json.Unmarshal(bytes, &data)
 	if err != nil {
 		return nil, err
