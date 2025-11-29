@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -29,6 +30,8 @@ import (
 	"github.com/ydssx/kratos-kit/pkg/limit"
 	"github.com/ydssx/kratos-kit/pkg/sse"
 	"github.com/ydssx/kratos-kit/pkg/util"
+	"google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -126,7 +129,7 @@ func healthCheck(w http.ResponseWriter, _ *http.Request) {
 }
 
 // CustomizeResponseEncoder 自定义响应编码器
-func CustomizeResponseEncoder(w http.ResponseWriter, r *http.Request, v interface{}) error {
+func CustomizeResponseEncoder(w http.ResponseWriter, r *http.Request, v any) error {
 	if rd, ok := v.(khttp.Redirector); ok {
 		url, code := rd.Redirect()
 		http.Redirect(w, r, url, code)
@@ -149,15 +152,62 @@ func CustomizeResponseEncoder(w http.ResponseWriter, r *http.Request, v interfac
 // CustomizeErrorEncoder 自定义错误编码器
 func CustomizeErrorEncoder(w http.ResponseWriter, r *http.Request, err error) {
 	resp := buildErrorResponse(err)
-	body, err := encoding.GetCodec("json").Marshal(resp)
-	if err != nil {
+	body, mErr := encoding.GetCodec("json").Marshal(resp)
+	if mErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	status := mapHTTPStatus(err)
 	w.Header().Set("Content-Type", jsonContentType)
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(status)
 	w.Write(body)
+}
+
+// mapHTTPStatus maps kratos/grpc errors and custom user errors to appropriate HTTP status codes.
+func mapHTTPStatus(err error) int {
+	// Prefer kratos error
+	se := kerrors.FromError(err)
+	code := codes.Code(se.Code)
+	switch code {
+	case codes.OK:
+		return http.StatusOK
+	case codes.Unauthenticated:
+		return http.StatusUnauthorized
+	case codes.PermissionDenied:
+		return http.StatusForbidden
+	case codes.NotFound:
+		return http.StatusNotFound
+	case codes.AlreadyExists:
+		return http.StatusConflict
+	case codes.ResourceExhausted:
+		return http.StatusTooManyRequests
+	case codes.InvalidArgument, codes.FailedPrecondition, codes.OutOfRange:
+		return http.StatusBadRequest
+	case codes.Unimplemented:
+		return http.StatusNotImplemented
+	case codes.Unavailable:
+		return http.StatusServiceUnavailable
+	case codes.DeadlineExceeded:
+		return http.StatusGatewayTimeout
+	case codes.Internal, codes.DataLoss, codes.Unknown, codes.Canceled, codes.Aborted:
+		return http.StatusInternalServerError
+	}
+
+	// If not a kratos/grpc error, check context timeout
+	if errors.Is(err, context.DeadlineExceeded) {
+		return http.StatusGatewayTimeout
+	}
+	// Check if it's a grpc status error
+	if s, ok := grpcstatus.FromError(err); ok {
+		switch s.Code() {
+		case codes.Unauthenticated:
+			return http.StatusUnauthorized
+		case codes.PermissionDenied:
+			return http.StatusForbidden
+		}
+	}
+	return http.StatusInternalServerError
 }
 
 // buildErrorResponse 构建错误响应
@@ -215,7 +265,7 @@ func handleDefaultError(err error, resp *util.Response) {
 }
 
 // marshalResponse 序列化响应
-func marshalResponse(v interface{}) ([]byte, error) {
+func marshalResponse(v any) ([]byte, error) {
 	if msg, ok := v.(proto.Message); ok {
 		return protojson.MarshalOptions{
 			UseProtoNames:   true,
@@ -226,7 +276,7 @@ func marshalResponse(v interface{}) ([]byte, error) {
 }
 
 // writeJSON 写入JSON响应
-func writeJSON(w http.ResponseWriter, v interface{}) error {
+func writeJSON(w http.ResponseWriter, v any) error {
 	body, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("marshal json failed: %w", err)
@@ -255,6 +305,10 @@ func BasicAuth(username, password string, next http.Handler) http.Handler {
 func newWhiteListMatcher() selector.MatchFunc {
 	whiteList := map[string]struct{}{
 		userv1.OperationUserServiceSendVerificationCode: {},
+		userv1.OperationUserServiceLogin:                {},
+		userv1.OperationUserServiceRegister:             {},
+		userv1.OperationUserServiceIsAccountExist:       {},
+		userv1.OperationUserServiceGoogleLogin:          {},
 	}
 
 	return func(ctx context.Context, operation string) bool {
@@ -306,11 +360,20 @@ func getHTTPConfig(c *conf.Bootstrap) HTTPServerConfig {
 	if c.Server.Http.Timeout != nil {
 		timeout = c.Server.Http.Timeout.AsDuration()
 	}
+	// BasicAuth 从环境变量读取，默认 admin/admin
+	username := os.Getenv("BASIC_AUTH_USERNAME")
+	if username == "" {
+		username = "admin"
+	}
+	password := os.Getenv("BASIC_AUTH_PASSWORD")
+	if password == "" {
+		password = "admin"
+	}
 	return HTTPServerConfig{
 		Addr:     c.Server.Http.Addr,
 		Timeout:  timeout,
-		Username: "admin", // 可以从配置文件读取
-		Password: "admin",
+		Username: username,
+		Password: password,
 	}
 }
 
@@ -328,7 +391,7 @@ func RegisterSSE(ctx context.Context, srv *khttp.Server) {
 		for {
 			select {
 			case <-ticker.C:
-				event := sse.NewEvent("ping", map[string]interface{}{
+				event := sse.NewEvent("ping", map[string]any{
 					"timestamp": time.Now(),
 					"message":   "Server is alive",
 				})
