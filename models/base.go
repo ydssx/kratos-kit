@@ -47,7 +47,7 @@ func cloneDB(db *gorm.DB) *gorm.DB {
 		Distinct:             stmt.Distinct,
 		Selects:              stmt.Selects,
 		Omits:                stmt.Omits,
-		Preloads:             map[string][]interface{}{},
+		Preloads:             map[string][]any{},
 		ConnPool:             stmt.ConnPool,
 		Schema:               stmt.Schema,
 		Context:              stmt.Context,
@@ -57,7 +57,7 @@ func cloneDB(db *gorm.DB) *gorm.DB {
 
 	if stmt.SQL.Len() > 0 {
 		newStmt.SQL.WriteString(stmt.SQL.String())
-		newStmt.Vars = make([]interface{}, 0, len(stmt.Vars))
+		newStmt.Vars = make([]any, 0, len(stmt.Vars))
 		newStmt.Vars = append(newStmt.Vars, stmt.Vars...)
 	}
 
@@ -79,7 +79,7 @@ func cloneDB(db *gorm.DB) *gorm.DB {
 	// 	copy(newStmt.scopes, stmt.scopes)
 	// }
 
-	stmt.Settings.Range(func(k, v interface{}) bool {
+	stmt.Settings.Range(func(k, v any) bool {
 		newStmt.Settings.Store(k, v)
 		return true
 	})

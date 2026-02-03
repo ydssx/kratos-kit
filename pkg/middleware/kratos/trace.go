@@ -17,7 +17,7 @@ import (
 
 func TraceServer() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
-		return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
+		return func(ctx context.Context, req any) (reply any, err error) {
 			var (
 				code      int32
 				reason    string
@@ -81,7 +81,7 @@ func TraceIDFromContext(ctx context.Context) string {
 }
 
 func TraceID() log.Valuer {
-	return func(ctx context.Context) interface{} {
+	return func(ctx context.Context) any {
 		return TraceIDFromContext(ctx)
 	}
 }
@@ -101,7 +101,7 @@ func OperationFromContext(ctx context.Context) string {
 }
 
 // extractArgs returns the string of the req
-func extractArgs(req interface{}) string {
+func extractArgs(req any) string {
 	if stringer, ok := req.(fmt.Stringer); ok {
 		return stringer.String()
 	}

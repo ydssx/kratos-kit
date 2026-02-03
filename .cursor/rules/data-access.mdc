@@ -1,0 +1,281 @@
+---
+alwaysApply: true
+description: 数据访问层指南，解释基础设施层的实现模式和最佳实践
+globs: internal/data/*.go,pkg/client/**/*.go
+---
+
+# 数据访问层指南
+
+数据访问层（data）负责封装所有外部资源访问，包括数据库、缓存、消息队列等。
+
+## 文件组织结构
+
+```
+internal/data/
+├── data.go                 # 数据层依赖注入配置
+├── user.go                 # 用户数据访问实现
+├── user_cache.go          # 用户缓存实现
+├── chat.go                # 聊天数据访问
+└── idempotent_check.go    # 幂等性检查
+
+pkg/client/
+├── mysql/mysql.go         # MySQL 客户端封装
+├── redis/redis.go         # Redis 客户端封装
+├── mongodb/mongo.go       # MongoDB 客户端封装
+└── kafka/kafka.go         # Kafka 客户端封装
+```
+
+## Repository 模式实现
+
+```go
+// internal/data/user.go
+package data
+
+import (
+    "context"
+    "kratos-kit/internal/biz"
+    "kratos-kit/internal/data/model"
+
+    "github.com/go-kratos/kratos/v2/log"
+    "gorm.io/gorm"
+)
+
+// userRepo 实现 biz.UserRepo 接口
+type userRepo struct {
+    data *Data
+    log  *log.Helper
+}
+
+// NewUserRepo 创建用户仓储实例
+func NewUserRepo(data *Data, logger log.Logger) biz.UserRepo {
+    return &userRepo{
+        data: data,
+        log:  log.NewHelper(logger),
+    }
+}
+
+// Create 实现用户创建
+func (r *userRepo) Create(ctx context.Context, user *biz.User) (*biz.User, error) {
+    // 转换为数据模型
+    model := &model.User{
+        Username:  user.Username,
+        Email:     user.Email,
+        Password:  user.Password,
+        CreatedAt: user.CreatedAt,
+        UpdatedAt: user.UpdatedAt,
+    }
+
+    // 保存到数据库
+    if err := r.data.db.WithContext(ctx).Create(model).Error; err != nil {
+        return nil, err
+    }
+
+    // 转换回领域对象
+    return r.toBizUser(model), nil
+}
+
+// GetByID 实现根据ID查询用户
+func (r *userRepo) GetByID(ctx context.Context, id int64) (*biz.User, error) {
+    var model model.User
+    if err := r.data.db.WithContext(ctx).First(&model, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, nil // 用户不存在返回 nil
+        }
+        return nil, err
+    }
+
+    return r.toBizUser(&model), nil
+}
+
+// Update 实现用户更新
+func (r *userRepo) Update(ctx context.Context, user *biz.User) (*biz.User, error) {
+    // 转换为数据模型
+    model := &model.User{
+        ID:        user.ID,
+        Username:  user.Username,
+        Email:     user.Email,
+        Password:  user.Password,
+        UpdatedAt: time.Now(),
+    }
+
+    // 更新数据库
+    if err := r.data.db.WithContext(ctx).Save(model).Error; err != nil {
+        return nil, err
+    }
+
+    return r.toBizUser(model), nil
+}
+
+// Delete 实现用户删除
+func (r *userRepo) Delete(ctx context.Context, id int64) error {
+    return r.data.db.WithContext(ctx).Delete(&model.User{}, id).Error
+}
+
+// List 实现用户列表查询
+func (r *userRepo) List(ctx context.Context, page, size int) ([]*biz.User, error) {
+    var models []*model.User
+    offset := (page - 1) * size
+
+    query := r.data.db.WithContext(ctx).Offset(offset).Limit(size)
+    if err := query.Find(&models).Error; err != nil {
+        return nil, err
+    }
+
+    // 转换为领域对象列表
+    users := make([]*biz.User, 0, len(models))
+    for _, m := range models {
+        users = append(users, r.toBizUser(m))
+    }
+
+    return users, nil
+}
+
+// toBizUser 将数据模型转换为领域对象
+func (r *userRepo) toBizUser(model *model.User) *biz.User {
+    return &biz.User{
+        ID:        model.ID,
+        Username:  model.Username,
+        Email:     model.Email,
+        Password:  model.Password,
+        CreatedAt: model.CreatedAt,
+        UpdatedAt: model.UpdatedAt,
+    }
+}
+```
+
+## 数据层依赖注入
+
+```go
+// internal/data/data.go
+package data
+
+import (
+    "kratos-kit/internal/conf"
+    "kratos-kit/pkg/client/mysql"
+    "kratos-kit/pkg/client/redis"
+
+    "github.com/go-redis/redis/v8"
+    "github.com/google/wire"
+    "gorm.io/gorm"
+)
+
+// Data 包含所有数据源
+type Data struct {
+    db    *gorm.DB
+    rdb   *redis.Client
+}
+
+// NewData 创建数据实例
+func NewData(c *conf.Data, logger log.Logger) (*Data, func(), error) {
+    // 初始化数据库连接
+    db, cleanup, err := mysql.NewMySQL(c.Database)
+    if err != nil {
+        return nil, nil, err
+    }
+
+    // 初始化 Redis 连接
+    rdb, err := redis.NewRedis(c.Redis)
+    if err != nil {
+        cleanup()
+        return nil, nil, err
+    }
+
+    data := &Data{
+        db:  db,
+        rdb: rdb,
+    }
+
+    return data, func() {
+        cleanup()
+        // 关闭其他连接
+    }, nil
+}
+
+// ProviderSet 数据层依赖注入配置
+var ProviderSet = wire.NewSet(
+    NewData,
+    NewUserRepo,
+    NewUserCacheRepo,
+    // 其他仓储...
+)
+```
+
+## 缓存层实现
+
+```go
+// internal/data/user_cache.go
+package data
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+    "kratos-kit/internal/biz"
+    "time"
+
+    "github.com/go-redis/redis/v8"
+)
+
+// userCacheRepo 实现用户缓存仓储
+type userCacheRepo struct {
+    data   *Data
+    prefix string
+}
+
+// NewUserCacheRepo 创建用户缓存仓储
+func NewUserCacheRepo(data *Data) biz.UserCacheRepo {
+    return &userCacheRepo{
+        data:   data,
+        prefix: "user:",
+    }
+}
+
+// GetByID 从缓存获取用户
+func (r *userCacheRepo) GetByID(ctx context.Context, id int64) (*biz.User, error) {
+    key := fmt.Sprintf("%s%d", r.prefix, id)
+
+    val, err := r.data.rdb.Get(ctx, key).Result()
+    if err == redis.Nil {
+        return nil, nil // 缓存不存在
+    }
+    if err != nil {
+        return nil, err
+    }
+
+    var user biz.User
+    if err := json.Unmarshal([]byte(val), &user); err != nil {
+        return nil, err
+    }
+
+    return &user, nil
+}
+
+// Set 缓存用户信息
+func (r *userCacheRepo) Set(ctx context.Context, user *biz.User) error {
+    key := fmt.Sprintf("%s%d", r.prefix, user.ID)
+
+    data, err := json.Marshal(user)
+    if err != nil {
+        return err
+    }
+
+    // 设置过期时间
+    return r.data.rdb.Set(ctx, key, data, time.Hour).Err()
+}
+
+// Delete 删除缓存
+func (r *userCacheRepo) Delete(ctx context.Context, id int64) error {
+    key := fmt.Sprintf("%s%d", r.prefix, id)
+    return r.data.rdb.Del(ctx, key).Err()
+}
+```
+
+## 最佳实践
+
+1. **接口隔离**: 每个仓储实现专门的接口，便于测试和替换
+2. **数据转换**: 在仓储层负责数据模型与领域对象之间的转换
+3. **错误处理**: 区分不同类型的错误（不存在、连接失败等）
+4. **资源管理**: 正确管理数据库连接和缓存连接的生命周期
+5. **事务支持**: 对于复杂操作，支持事务回滚
+6. **缓存策略**: 合理使用缓存，提升性能，避免缓存穿透等问题
+7. **连接池**: 配置合适的连接池参数，避免资源泄露

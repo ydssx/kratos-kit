@@ -57,7 +57,7 @@ func (m *userLoginLogModel) Create(userLoginLog UserLoginLog) error {
 	return m.db.Create(&userLoginLog).Error
 }
 
-func (m *userLoginLogModel) Updates(values interface{}) error {
+func (m *userLoginLogModel) Updates(values any) error {
 	return m.db.Updates(values).Error
 }
 
@@ -71,7 +71,7 @@ func (m *userLoginLogModel) LastOne() (data *UserLoginLog, err error) {
 	return
 }
 
-func (m *userLoginLogModel) DeleteByPrimKey(key interface{}) error {
+func (m *userLoginLogModel) DeleteByPrimKey(key any) error {
 	return m.db.Where(" IN (?)", key).Delete(&UserLoginLog{}).Error
 }
 

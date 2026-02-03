@@ -88,7 +88,7 @@ func (r *userRepo) GetUserByID(ctx context.Context, id uint) (*models.User, erro
 	return user, nil
 }
 
-func (r *userRepo) UpdateUser(ctx context.Context, userId int, user interface{}) error {
+func (r *userRepo) UpdateUser(ctx context.Context, userId int, user any) error {
 	return models.NewUserModel(r.data.DB(ctx)).SetIds(int(userId)).Updates(user)
 }
 

@@ -14,7 +14,7 @@ import (
 // AuthServer 返回一个中间件,用于验证 JWT 令牌并将 Claims 添加到 context 中。
 func AuthServer(jwtManager *jwt.Manager) middleware.Middleware {
 	return func(h middleware.Handler) middleware.Handler {
-		return func(ctx context.Context, req interface{}) (interface{}, error) {
+		return func(ctx context.Context, req any) (any, error) {
 			ts, ok := transport.FromServerContext(ctx)
 			if ok {
 				header := ts.RequestHeader()

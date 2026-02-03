@@ -66,7 +66,7 @@ func gen(appName, protoFile string) {
 		}
 	}
 	serviceInfo, supportHttp := parseProto(protoFile)
-	data := map[string]interface{}{
+	data := map[string]any{
 		"appName":     appName,
 		"serviceInfo": serviceInfo,
 		"module":      parseGoModule(),
@@ -87,7 +87,7 @@ func gen(appName, protoFile string) {
 // If the file already exists, it writes the generated code using WriteDecl.
 // Otherwise, it writes the generated code to a new file.
 // It prints a success message when the file is generated successfully.
-func mkFile(data map[string]interface{}, outFile string, text string) error {
+func mkFile(data map[string]any, outFile string, text string) error {
 	// Define custom template function
 	funcs := template.FuncMap{"Title": strings.Title}
 

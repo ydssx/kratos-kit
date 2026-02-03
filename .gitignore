@@ -97,3 +97,4 @@ api/swagger/
 __debug_bin
 .history/
 .env
+.kiro

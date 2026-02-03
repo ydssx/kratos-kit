@@ -10,18 +10,37 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+// MongoConfig holds MongoDB connection configuration
+type MongoConfig struct {
+	URI             string
+	Username        string
+	Password        string
+	MaxPoolSize     uint64
+	MaxConnIdleTime time.Duration
+}
 
 // InitMongoDB initializes a MongoDB client and returns a client and a cleanup function.
 // The cleanup function must be called when the client is no longer needed.
-func InitMongoDB(uri string) (*mongo.Client, func()) {
+func InitMongoDB(config MongoConfig) (*mongo.Client, func()) {
 	ctx := context.Background()
+
+	clientOptions := []*options.ClientOptions{
+		options.Client().ApplyURI(config.URI),
+		options.Client().SetMaxPoolSize(config.MaxPoolSize),
+		options.Client().SetMaxConnIdleTime(config.MaxConnIdleTime),
+	}
+
+	// Only set auth if credentials are provided
+	if config.Username != "" && config.Password != "" {
+		clientOptions = append(clientOptions,
+			options.Client().SetAuth(options.Credential{
+				Username: config.Username,
+				Password: config.Password,
+			}))
+	}
+
 	// Create a new MongoDB client.
-	cli, err := mongo.Connect(ctx,
-		options.Client().ApplyURI(uri),
-		options.Client().SetMaxPoolSize(100),
-		options.Client().SetMaxConnIdleTime(10*time.Second),
-		options.Client().SetAuth(options.Credential{Username: "root", Password: "RSeMAN7csL"}),
-	)
+	cli, err := mongo.Connect(ctx, clientOptions...)
 	if err != nil {
 		panic("failed to connect to MongoDB: " + err.Error())
 	}
@@ -46,8 +65,22 @@ type Mongo struct {
 	cleanup func()
 }
 
+// NewMongo creates a new Mongo instance with default configuration
+// Deprecated: Use NewMongoWithConfig for better configuration control
 func NewMongo(url string, dbName string) *Mongo {
-	cli, cleanup := InitMongoDB(url)
+	config := MongoConfig{
+		URI:             url,
+		MaxPoolSize:     100,
+		MaxConnIdleTime: 10 * time.Second,
+	}
+	cli, cleanup := InitMongoDB(config)
+	db := cli.Database(dbName)
+	return &Mongo{db: db, cli: cli, cleanup: cleanup}
+}
+
+// NewMongoWithConfig creates a new Mongo instance with custom configuration
+func NewMongoWithConfig(config MongoConfig, dbName string) *Mongo {
+	cli, cleanup := InitMongoDB(config)
 	db := cli.Database(dbName)
 	return &Mongo{db: db, cli: cli, cleanup: cleanup}
 }

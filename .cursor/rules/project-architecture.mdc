@@ -1,0 +1,77 @@
+---
+alwaysApply: true
+description: 项目架构指南，解释 Kratos 微服务架构的基本组织方式
+globs: **/*.go,**/README.md
+---
+
+# Kratos 微服务项目架构指南
+
+本项目采用标准的 Kratos 微服务架构，遵循领域驱动设计（DDD）原则，分为以下层次：
+
+## 项目结构总览
+
+```
+kratos-kit/
+├── api/                 # API 定义层（Protocol Buffers）
+│   ├── user/v1/        # 用户服务 API 定义
+│   ├── admin/v1/       # 管理员服务 API 定义
+│   └── job/v1/         # 任务服务 API 定义
+├── internal/           # 内部业务代码（不对外暴露）
+│   ├── biz/           # 业务逻辑层（领域层）
+│   ├── data/          # 数据访问层（基础设施层）
+│   ├── service/       # 服务层（用例层）
+│   ├── server/        # 服务器层（接口适配层）
+│   └── middleware/    # 中间件层
+├── pkg/               # 可重用的工具包
+├── cmd/               # 应用程序入口点
+├── configs/           # 配置文件
+├── models/            # 数据模型（GORM 生成）
+└── tools/             # 代码生成工具
+```
+
+## 各层职责说明
+
+### [API 层](mdc:api/)
+- 定义服务接口和数据结构（Protocol Buffers）
+- 生成 Go 代码用于类型安全
+- 支持 gRPC 和 HTTP 双协议
+
+### [业务逻辑层](mdc:internal/biz/)
+- 实现核心业务规则和领域逻辑
+- 定义业务实体和值对象
+- 处理业务用例和领域服务
+
+### [数据访问层](mdc:internal/data/)
+- 封装数据访问逻辑
+- 实现 Repository 模式
+- 处理数据库、缓存、消息队列等外部资源
+
+### [服务层](mdc:internal/service/)
+- 实现应用服务层
+- 协调多个领域服务完成复杂业务操作
+- 处理事务和跨领域逻辑
+
+### [服务器层](mdc:internal/server/)
+- HTTP 和 gRPC 服务器实现
+- 请求路由和协议适配
+- 集成中间件和拦截器
+
+### [中间件层](mdc:internal/middleware/)
+- 认证授权中间件
+- 日志记录中间件
+- 限流和熔断中间件
+- CORS 和安全中间件
+
+## 关键设计模式
+
+1. **依赖注入**: 使用 [Wire](mdc:cmd/*/wire.go) 进行依赖注入管理
+2. **Repository 模式**: 数据访问层使用 Repository 接口定义
+3. **干净架构**: 依赖方向从外层指向内层，内层不依赖外层
+4. **代码生成**: 使用工具自动生成重复代码
+
+## 开发规范
+
+- 所有业务代码放在 `internal/` 目录下，外部无法访问
+- API 定义优先，生成代码不可手动修改
+- 遵循 SOLID 原则和领域驱动设计
+- 使用接口定义依赖，便于测试和替换

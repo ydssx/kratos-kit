@@ -82,7 +82,7 @@ func (m *fileMetadataModel) Create(fileMetadata *FileMetadata) (*FileMetadata, e
 	return fileMetadata, err
 }
 
-func (m *fileMetadataModel) Updates(values interface{}) error {
+func (m *fileMetadataModel) Updates(values any) error {
 	return m.db.Updates(values).Error
 }
 
@@ -96,7 +96,7 @@ func (m *fileMetadataModel) LastOne() (data *FileMetadata, err error) {
 	return
 }
 
-func (m *fileMetadataModel) DeleteByPrimKey(key interface{}) error {
+func (m *fileMetadataModel) DeleteByPrimKey(key any) error {
 	return m.db.Where("id IN (?)", key).Delete(&FileMetadata{}).Error
 }
 

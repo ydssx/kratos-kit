@@ -13,7 +13,7 @@ type IdempotentCheck struct {
 }
 
 // IsIdempotent implements biz.IdempotencyChecker.
-func (i *IdempotentCheck) IsIdempotent(ctx context.Context, uid int, req interface{}) (bool, error) {
+func (i *IdempotentCheck) IsIdempotent(ctx context.Context, uid int, req any) (bool, error) {
 	key := fmt.Sprintf("idempotent:%d:%s", uid, util.CalculateChecksum(req))
 	if i.data.rdb.Exists(ctx, key).Val() == 1 {
 		return true, nil
@@ -23,7 +23,7 @@ func (i *IdempotentCheck) IsIdempotent(ctx context.Context, uid int, req interfa
 }
 
 // MarkIdempotent implements biz.IdempotencyChecker.
-func (i *IdempotentCheck) MarkIdempotent(ctx context.Context, uid int, req interface{}) error {
+func (i *IdempotentCheck) MarkIdempotent(ctx context.Context, uid int, req any) error {
 	key := fmt.Sprintf("idempotent:%d:%s", uid, util.CalculateChecksum(req))
 	return i.data.rdb.Set(ctx, key, 1, 0).Err()
 }

@@ -29,10 +29,10 @@ type Payment interface {
 // PaymentAdapter is an interface that defines the methods for adapting payment requests and responses
 // between the payment service and the payment channel.
 type PaymentAdapter interface {
-	ToChannelRequest(request *SubscribeRequest) interface{}
-	ToChannelRequestRenew(request *RenewRequest) interface{}
-	ToChannelRequestQuery(request *QuerySubscribeRequest) interface{}
-	FromChannelResponse(response interface{}) *SubscribeResponse
+	ToChannelRequest(request *SubscribeRequest) any
+	ToChannelRequestRenew(request *RenewRequest) any
+	ToChannelRequestQuery(request *QuerySubscribeRequest) any
+	FromChannelResponse(response any) *SubscribeResponse
 }
 
 type SubscribeRequest struct {
@@ -65,7 +65,7 @@ type SubscribeRequest struct {
 	SiteDomain     string // 站点域名
 }
 
-func (req SubscribeRequest) Desensitization() interface{} {
+func (req SubscribeRequest) Desensitization() any {
 	req.CardNo = strings.Repeat("*", len(req.CardNo))
 	req.CVV = strings.Repeat("*", len(req.CVV))
 	req.FirstName = strings.Repeat("*", len(req.FirstName))
@@ -81,7 +81,7 @@ type SubscribeResponse struct {
 	TradeNo      string
 	PaymentToken string
 	RedirectUrl  string
-	OrderInfo    interface{}
+	OrderInfo    any
 }
 
 type QuerySubscribeRequest struct {
@@ -110,7 +110,7 @@ type NotifyResponse struct {
 	OrderNo      string
 	TradeNo      string
 	Status       PaymentStatus
-	OrderInfo    interface{}
+	OrderInfo    any
 	SubGateSign  string
 	SubGateTime  string
 	PaymentToken string

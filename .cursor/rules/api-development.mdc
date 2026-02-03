@@ -1,0 +1,118 @@
+---
+alwaysApply: true
+description: API 开发指南，解释 Protocol Buffers 和 API 定义的最佳实践
+globs: api/**/*.proto,**/*pb.go
+---
+
+# API 开发指南
+
+本项目使用 Protocol Buffers 定义 API，支持 gRPC 和 HTTP 双协议。
+
+## Protocol Buffers 使用规范
+
+### 文件组织
+```
+api/
+├── [service_name]/
+│   └── v1/
+│       ├── [service_name].proto    # 服务定义
+│       ├── [service_name]_grpc.pb.go    # 生成的 gRPC 代码
+│       ├── [service_name]_http.pb.go    # 生成的 HTTP 代码
+│       └── [service_name].pb.validate.go # 验证代码
+```
+
+### 基础语法示例
+```protobuf
+syntax = "proto3";
+
+package api.user.v1;
+
+option go_package = "kratos-kit/api/user/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.user.v1";
+
+import "validate/validate.proto";
+import "google/api/annotations.proto";
+
+// 用户服务定义
+service UserService {
+  // 创建用户
+  rpc CreateUser (CreateUserRequest) returns (CreateUserReply) {
+    option (google.api.http) = {
+      post: "/api/v1/users"
+      body: "*"
+    };
+  };
+
+  // 获取用户信息
+  rpc GetUser (GetUserRequest) returns (GetUserReply) {
+    option (google.api.http) = {
+      get: "/api/v1/users/{id}"
+    };
+  };
+}
+
+// 请求和响应消息
+message CreateUserRequest {
+  string username = 1 [(validate.rules).string.min_len = 3];
+  string email = 2 [(validate.rules).string.email = true];
+  string password = 3 [(validate.rules).string.min_len = 8];
+}
+
+message CreateUserReply {
+  User user = 1;
+  string token = 2;
+}
+
+message User {
+  int64 id = 1;
+  string username = 2;
+  string email = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+```
+
+## 验证规则
+
+使用 [protoc-gen-validate](https://github.com/envoyproxy/protoc-gen-validate) 进行字段验证：
+
+```protobuf
+message LoginRequest {
+  string username = 1 [(validate.rules).string.min_len = 3];
+  string password = 2 [(validate.rules).string = {
+    min_len: 8,
+    pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$"
+  }];
+}
+```
+
+## 常用验证规则
+
+- `string.min_len` / `max_len`: 字符串长度限制
+- `string.email`: 邮箱格式验证
+- `string.pattern`: 正则表达式验证
+- `int32.gte` / `lte`: 数值范围验证
+- `repeated.min_items` / `max_items`: 数组长度验证
+- `message.required`: 消息必填验证
+
+## 生成命令
+
+```bash
+# 生成 Protocol Buffers 代码
+make api
+
+# 或使用 buf 工具
+buf generate
+
+# 清理生成的文件
+buf mod update
+```
+
+## 最佳实践
+
+1. **版本管理**: 使用 `v1`、`v2` 等版本目录管理 API 版本
+2. **向后兼容**: 新增字段时使用 `optional` 或设置默认值
+3. **字段编号**: 字段编号不要复用，已删除字段号不可重用
+4. **包名规范**: `option go_package` 应与目录结构一致
+5. **消息命名**: 请求用 `Request`，响应用 `Reply` 后缀
+6. **字段验证**: 所有用户输入字段都应添加适当的验证规则

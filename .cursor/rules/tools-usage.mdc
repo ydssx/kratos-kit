@@ -1,0 +1,237 @@
+---
+alwaysApply: true
+description: 工具使用指南，解释项目中的代码生成工具和辅助工具
+globs: tools/**/*.go,Makefile,buf.*,**/wire*.go
+---
+
+# 工具使用指南
+
+本项目提供多种代码生成和辅助工具，提升开发效率。
+
+## 代码生成工具
+
+### 1. Protocol Buffers 代码生成
+
+```bash
+# 生成所有 .proto 文件的代码
+make api
+
+# 或使用 buf 工具
+buf generate
+
+# 清理并重新生成
+buf mod update
+buf generate
+```
+
+**生成的文件包括：**
+- `*_grpc.pb.go` - gRPC 服务代码
+- `*_http.pb.go` - HTTP 网关代码
+- `*.pb.go` - 数据结构代码
+- `*.pb.validate.go` - 验证代码
+
+### 2. 数据模型生成
+
+使用 GORM 生成器自动生成数据模型：
+
+```bash
+# 生成所有模型
+make model
+
+# 或直接运行工具
+cd tools/gorm-gen && go run main.go
+```
+
+**配置说明：**
+```go
+// tools/gorm-gen/main.go
+package main
+
+import (
+    "gorm.io/gen"
+    "gorm.io/gorm"
+    "kratos-kit/internal/conf"
+)
+
+func main() {
+    // 数据库配置
+    g := gen.NewGenerator(gen.Config{
+        OutPath: "./models",           // 输出目录
+        Mode:    gen.WithDefaultQuery, // 生成模式
+    })
+
+    // 连接数据库
+    db := connectDB()
+
+    // 生成指定表的数据模型
+    g.ApplyBasic(
+        g.GenerateModel("users"),
+        g.GenerateModel("user_login_logs"),
+    )
+
+    g.Execute()
+}
+```
+
+### 3. 业务代码生成
+
+项目提供业务代码生成器：
+
+```bash
+# 生成业务代码
+make codegen
+
+# 或直接运行
+cd tools/codegen && go run main.go
+```
+
+## 依赖注入工具 (Wire)
+
+### Wire 配置示例
+
+```go
+// cmd/api/wire.go
+//go:build wireinject
+// +build wireinject
+
+package main
+
+import (
+    "kratos-kit/internal/server"
+    "kratos-kit/internal/service"
+    "kratos-kit/internal/data"
+    "kratos-kit/internal/biz"
+
+    "github.com/google/wire"
+)
+
+func InitApp() (*App, error) {
+    wire.Build(
+        // 数据层
+        data.ProviderSet,
+        // 业务层
+        biz.ProviderSet,
+        // 服务层
+        service.ProviderSet,
+        // 服务器层
+        server.ProviderSet,
+        // 其他提供者...
+        newApp,
+    )
+    return nil, nil
+}
+```
+
+### 生成依赖注入代码
+
+```bash
+# 生成 wire_gen.go 文件
+cd cmd/api && wire gen
+
+# 清理生成的文件
+wire gen -cleanup
+```
+
+## Makefile 命令
+
+```makefile
+# Makefile 常用命令
+.PHONY: api
+api:                    # 生成 Protocol Buffers 代码
+    buf generate
+
+.PHONY: model
+model:                  # 生成数据模型
+    cd tools/gorm-gen && go run main.go
+
+.PHONY: codegen
+codegen:                 # 生成业务代码
+    cd tools/codegen && go run main.go
+
+.PHONY: wire
+wire:                   # 生成依赖注入代码
+    cd cmd/api && wire gen
+    cd cmd/admin && wire gen
+
+.PHONY: build
+build:                  # 构建所有服务
+    mkdir -p bin/
+    go build -ldflags="-s -w" -o ./bin/api ./cmd/api
+    go build -ldflags="-s -w" -o ./bin/admin ./cmd/admin
+
+.PHONY: test
+test:                   # 运行测试
+    go test -v ./...
+
+.PHONY: lint
+lint:                   # 代码检查
+    golangci-lint run
+
+.PHONY: docker
+docker:                 # 构建 Docker 镜像
+    docker build -t kratos-kit/api:latest -f cmd/api/Dockerfile .
+
+.PHONY: clean
+clean:                  # 清理生成文件
+    rm -rf bin/
+    find . -name "*.pb.go" -delete
+    find . -name "*_gen.go" -delete
+```
+
+## 项目脚手架工具
+
+### 快速生成新服务
+
+项目提供脚手架工具快速生成新服务的代码框架：
+
+```bash
+# 生成新的业务服务
+cd tools/codegen && go run main.go --service=user
+
+# 生成选项
+--service=name      # 服务名称
+--proto=path        # proto 文件路径
+--with-http         # 生成 HTTP 支持
+--with-grpc         # 生成 gRPC 支持
+```
+
+## 性能监控和调试工具
+
+### 1. pprof 性能分析
+
+```go
+import _ "net/http/pprof"
+
+// 在 main 函数中启动 pprof 服务器
+go func() {
+    log.Println(http.ListenAndServe("localhost:6060", nil))
+}()
+```
+
+访问 `http://localhost:6060/debug/pprof/` 查看性能数据。
+
+### 2. 日志工具
+
+使用项目内置的日志工具：
+
+```go
+// pkg/logger/zap.go
+logger := zap.NewLogger(&conf.Logger{
+    Level: "info",
+    File: &conf.Logger_File{
+        Name: "logs/app.log",
+        MaxSize: 100,  // MB
+        MaxAge:  30,   // 天
+        MaxBackups: 10,
+    },
+})
+```
+
+## 最佳实践
+
+1. **代码生成优先**: 优先使用生成工具，避免手动编写重复代码
+2. **依赖注入**: 使用 Wire 管理依赖关系，避免硬编码依赖
+3. **配置管理**: 通过配置文件管理各种参数，便于不同环境部署
+4. **构建优化**: 使用 `-ldflags="-s -w"` 减小二进制文件大小
+5. **健康检查**: 为服务添加健康检查端点，便于监控
+6. **优雅关闭**: 实现优雅关闭，正确释放资源

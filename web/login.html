@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录/注册</title>
+    <style>
+        /* 定义亮色主题变量 */
+        :root {
+            --bg-color: #f5f5f5;
+            --card-bg: white;
+            --text-color: #333;
+            --text-secondary: #666;
+            --border-color: #ddd;
+            --primary-color: #1890ff;
+            --primary-hover: #40a9ff;
+            --error-color: #ff4d4f;
+            --input-bg: white;
+            --btn-secondary-bg: #f0f0f0;
+            --btn-secondary-hover: #e0e0e0;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* 定义暗色主题变量 */
+        [data-theme='dark'] {
+            --bg-color: #1f1f1f;
+            --card-bg: #2f2f2f;
+            --text-color: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --border-color: #404040;
+            --primary-color: #177ddc;
+            --primary-hover: #3c9ae8;
+            --error-color: #ff4d4f;
+            --input-bg: #3f3f3f;
+            --btn-secondary-bg: #404040;
+            --btn-secondary-hover: #505050;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        /* 更新现有样式，使用CSS变量 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 20px var(--shadow-color);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tab {
+            padding: 1rem;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+            color: var(--text-secondary);
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            margin-bottom: -2px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            transition: border-color 0.3s;
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .divider {
+            margin: 1.5rem 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: #ddd;
+        }
+
+        .divider::before {
+            left: 0;
+        }
+
+        .divider::after {
+            right: 0;
+        }
+
+        .social-login {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .social-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        .social-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .error-message {
+            color: var(--error-color);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .verification-code {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .verification-code input {
+            flex: 1;
+        }
+
+        .verification-code button {
+            padding: 0 1rem;
+            white-space: nowrap;
+            background: var(--btn-secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--text-color);
+        }
+
+        .verification-code button:hover {
+            background: var(--btn-secondary-hover);
+        }
+
+        /* 主题切换按钮样式 */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--btn-secondary-hover);
+        }
+
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .password-field {
+            position: relative;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            color: var(--text-secondary);
+        }
+
+        .password-toggle:hover {
+            color: var(--primary-color);
+        }
+
+        .password-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-container img {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo-container h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="切换主题">
+        <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" class="moon"></path>
+            <circle cx="12" cy="12" r="5" class="sun"></circle>
+            <line x1="12" y1="1" x2="12" y2="3" class="sun"></line>
+            <line x1="12" y1="21" x2="12" y2="23" class="sun"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" class="sun"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" class="sun"></line>
+            <line x1="1" y1="12" x2="3" y2="12" class="sun"></line>
+            <line x1="21" y1="12" x2="23" y2="12" class="sun"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" class="sun"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" class="sun"></line>
+        </svg>
+    </button>
+
+    <div class="container">
+        <div class="logo-container">
+            <img src="https://kiwishort.com/favicon.svg" alt="网站Logo">
+            <h1>AI Chat</h1>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('login')">登录</div>
+            <div class="tab" onclick="switchTab('register')">注册</div>
+        </div>
+
+        <!-- 登录表单 -->
+        <form id="loginForm" class="form">
+            <div class="form-group">
+                <label>邮箱</label>
+                <input type="email" name="email" required>
+                <div class="error-message">请输入有效的邮箱地址</div>
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <div class="password-field">
+                    <input type="password" name="password">
+                    <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="切换密码显示">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path class="hide-password" d="M2 2l20 20" style="display: none;"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="error-message">密码不能为空</div>
+            </div>
+            <div class="form-group">
+                <label>验证码</label>
+                <div class="verification-code">
+                    <input type="text" name="code">
+                    <button type="button" onclick="sendVerificationCode('login')">获取验证码</button>
+                </div>
+                <div class="error-message">验证码不能为空</div>
+            </div>
+            <button type="submit" class="btn">登录</button>
+        </form>
+
+        <!-- 注册表单 -->
+        <form id="registerForm" class="form" style="display: none;">
+            <div class="form-group">
+                <label>邮箱</label>
+                <input type="email" name="email" required>
+                <div class="error-message">请输入有效的邮箱地址</div>
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <div class="password-field">
+                    <input type="password" name="password" required>
+                    <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="切换密码显示">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path class="hide-password" d="M2 2l20 20" style="display: none;"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="error-message">密码长度必须在6-20位之间</div>
+            </div>
+            <div class="form-group">
+                <label>验证码</label>
+                <div class="verification-code">
+                    <input type="text" name="code" required>
+                    <button type="button" onclick="sendVerificationCode('register')">获取验证码</button>
+                </div>
+                <div class="error-message">验证码不能为空</div>
+            </div>
+            <button type="submit" class="btn">注册</button>
+        </form>
+
+        <div class="divider">或</div>
+
+        <div class="social-login">
+            <button class="social-btn" onclick="googleLogin()">
+                <img src="google-icon.png" alt="Google" width="20">
+                Google 登录
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const baseUrl = 'http://localhost:9003';
+        // 切换登录/注册表单
+        function switchTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const tabs = document.querySelectorAll('.tab');
+
+            if (tab === 'login') {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                tabs[0].classList.add('active');
+                tabs[1].classList.remove('active');
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                tabs[0].classList.remove('active');
+                tabs[1].classList.add('active');
+            }
+        }
+
+        // 发送验证码
+        async function sendVerificationCode(type) {
+            const form = document.getElementById(type + 'Form');
+            const email = form.querySelector('input[name="email"]').value;
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/users/send_verification_code`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('发送验证码失败');
+                }
+
+                // 禁用按钮并开始倒计时
+                const button = form.querySelector('.verification-code button');
+                let countdown = 60;
+                button.disabled = true;
+                
+                const timer = setInterval(() => {
+                    button.textContent = `${countdown}秒后重试`;
+                    countdown--;
+                    
+                    if (countdown < 0) {
+                        clearInterval(timer);
+                        button.disabled = false;
+                        button.textContent = '获取验证码';
+                    }
+                }, 1000);
+
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // 处理登录表单提交
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/users/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: formData.get('email'),
+                        password: formData.get('password'),
+                        code: formData.get('code')
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('登录失败');
+                }
+
+                const data = await response.json();
+                // 存储用户token
+                localStorage.setItem('userToken', data.uuid);
+                // 跳转到首页
+                window.location.href = '/';
+
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // 处理注册表单提交
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/users/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: formData.get('email'),
+                        password: formData.get('password'),
+                        code: formData.get('code')
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('注册失败');
+                }
+
+                const data = await response.json();
+                // 存储用户token
+                localStorage.setItem('userToken', data.uuid);
+                // 跳转到首页
+                window.location.href = '/';
+
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // Google登录
+        async function googleLogin() {
+            try {
+                const response = await fetch(`${baseUrl}/api/users/google-login`);
+                if (!response.ok) {
+                    throw new Error('获取Google登录链接失败');
+                }
+                
+                const data = await response.json();
+                window.location.href = data.url;
+                
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // 主题切换功能
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            // 更新图标
+            updateThemeIcon(newTheme);
+        }
+
+        // 更新主题图标
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('theme-icon');
+            const moonPaths = icon.querySelectorAll('.moon');
+            const sunPaths = icon.querySelectorAll('.sun');
+            
+            if (theme === 'dark') {
+                moonPaths.forEach(path => path.style.display = 'none');
+                sunPaths.forEach(path => path.style.display = '');
+            } else {
+                moonPaths.forEach(path => path.style.display = '');
+                sunPaths.forEach(path => path.style.display = 'none');
+            }
+        }
+
+        // 初始化主题
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 
+                              (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        // 页面加载时初始化主题
+        document.addEventListener('DOMContentLoaded', initTheme);
+
+        // 切换密码显示/隐藏
+        function togglePassword(button) {
+            const input = button.parentElement.querySelector('input');
+            const hidePath = button.querySelector('.hide-password');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                hidePath.style.display = '';
+            } else {
+                input.type = 'password';
+                hidePath.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html> 

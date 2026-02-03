@@ -77,9 +77,16 @@ func (uc *UserUseCase) Login(ctx context.Context, req *userv1.LoginRequest) (*us
 
 	// 验证密码或验证码
 	if req.Password != "" {
-		// 密码登录
-		if util.MD5(req.Password) != user.PasswordHash {
-			return nil, errors.NewUserError("password is incorrect")
+		// 优先尝试 bcrypt 校验，失败后在检测为旧数据（MD5）时做一次性兼容
+		if err := util.ComparePassword(user.PasswordHash, req.Password); err != nil {
+			// 兼容旧的 MD5 存量密码
+			if util.MD5(req.Password) != user.PasswordHash {
+				return nil, errors.NewUserError("password is incorrect")
+			}
+			// 升级为 bcrypt（平滑迁移）
+			if hashed, herr := util.HashPassword(req.Password); herr == nil {
+				_ = uc.repo.UpdateUserByID(ctx, int(user.ID), &models.User{PasswordHash: hashed})
+			}
 		}
 	} else if req.Code != "" {
 		// 验证码登录
@@ -322,11 +329,20 @@ func (uc *UserUseCase) Register(ctx context.Context, req *userv1.RegisterRequest
 	}
 
 	newUser := &models.User{
-		UUID:         util.GetUUID(),
-		Email:        req.Email,
-		PasswordHash: util.MD5(req.Password),
-		IPAddress:    middleware.GetHeaderInfo(ctx).ClientIP,
-		Username:     strings.Split(req.Email, "@")[0],
+		UUID:  util.GetUUID(),
+		Email: req.Email,
+		// 使用 bcrypt 存储密码
+		PasswordHash: func() string {
+			hashed, err := util.HashPassword(req.Password)
+			if err != nil {
+				// 兜底：理论上不应失败，失败则回退为 MD5 以保证流程不中断，但打日志便于排查
+				logger.Errorf(ctx, "hash password failed: %v", err)
+				return util.MD5(req.Password)
+			}
+			return hashed
+		}(),
+		IPAddress: middleware.GetHeaderInfo(ctx).ClientIP,
+		Username:  strings.Split(req.Email, "@")[0],
 	}
 
 	_, err = uc.repo.CreateUser(ctx, newUser)

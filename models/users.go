@@ -88,7 +88,7 @@ func (u *userModel) Create(user User) (User, error) {
 	return user, err
 }
 
-func (m *userModel) Updates(values interface{}) error {
+func (m *userModel) Updates(values any) error {
 	return m.db.Updates(values).Error
 }
 
@@ -102,7 +102,7 @@ func (m *userModel) LastOne() (data *User, err error) {
 	return
 }
 
-func (m *userModel) DeleteByPrimKey(key interface{}) error {
+func (m *userModel) DeleteByPrimKey(key any) error {
 	return m.db.Where("id IN (?)", key).Delete(&User{}).Error
 }
 
@@ -160,7 +160,7 @@ func (u *userModel) SetBrowserFingerprint(fingerprint string) *userModel {
 	return u
 }
 
-func (u *userModel) Where(query string, args ...interface{}) *userModel {
+func (u *userModel) Where(query string, args ...any) *userModel {
 	u.db = u.db.Where(query, args...)
 	return u
 }

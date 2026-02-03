@@ -2,14 +2,27 @@ package service
 
 import (
 	"context"
+	"time"
 
 	userv1 "github.com/ydssx/kratos-kit/api/user/v1"
 	"github.com/ydssx/kratos-kit/internal/biz"
+	"github.com/ydssx/kratos-kit/pkg/jwt"
 	"github.com/ydssx/kratos-kit/pkg/util"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+// jwtManagerFromEnv builds a JWT manager from environment variables if configured.
+func jwtManagerFromEnv() *jwt.Manager {
+	return jwt.NewManager(jwt.Config{
+		AccessSecret:          util.GetEnvDefault("JWT_ACCESS_SECRET", ""),
+		RefreshSecret:         util.GetEnvDefault("JWT_REFRESH_SECRET", ""),
+		AccessTokenDuration:   2 * time.Hour,
+		RefreshTokenDuration:  30 * 24 * time.Hour,
+		AccessTokenCookieName: "",
+	})
+}
 
 // GreeterService is a greeter service.
 type UserService struct {
@@ -23,7 +36,21 @@ func NewUserService(uc *biz.UserUseCase) *UserService {
 
 // Login 用户登录
 func (s *UserService) Login(ctx context.Context, req *userv1.LoginRequest) (*userv1.LoginResponse, error) {
-	return s.uc.Login(ctx, req)
+	res, err := s.uc.Login(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	// 可选：若启用 JWT（通过环境变量 JWT_ACCESS_SECRET），则生成 token 返回
+	accessSecret := util.GetEnvDefault("JWT_ACCESS_SECRET", "")
+	if accessSecret != "" {
+		manager := jwtManagerFromEnv()
+		// 这里没有 user id/name/role，可用 uuid 换取用户或在 Login 用例返回附加信息
+		// 为兼容性，仅将 uuid 放入 Metadata，uid 置 0
+		access, refresh, _ := manager.GenerateTokenPair(0, res.Uuid, "user")
+		res.AccessToken = access
+		res.RefreshToken = refresh
+	}
+	return res, nil
 }
 
 // GetUser 获取用户信息

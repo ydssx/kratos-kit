@@ -15,7 +15,7 @@ func TestJsonToMap(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    map[string]interface{}
+		want    map[string]any
 		wantErr bool
 	}{
 		// TODO: Add test cases.
@@ -42,7 +42,7 @@ func TestCompareRequests(t *testing.T) {
 	}
 
 	type args struct {
-		requests []interface{}
+		requests []any
 	}
 	tests := []struct {
 		name string
@@ -50,8 +50,8 @@ func TestCompareRequests(t *testing.T) {
 		want bool
 	}{
 		// TODO: Add test cases.
-		{"", args{requests: []interface{}{&Request{Field1: "value", Field2: 10}, &Request{Field1: "value", Field2: 10}}}, true},
-		{"", args{requests: []interface{}{&Request{Field1: "value", Field2: 10}, &Request{Field1: "value", Field2: 11}}}, false},
+		{"", args{requests: []any{&Request{Field1: "value", Field2: 10}, &Request{Field1: "value", Field2: 10}}}, true},
+		{"", args{requests: []any{&Request{Field1: "value", Field2: 10}, &Request{Field1: "value", Field2: 11}}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -64,7 +64,7 @@ func TestCompareRequests(t *testing.T) {
 
 func TestSetDefaults(t *testing.T) {
 	type args struct {
-		data interface{}
+		data any
 	}
 	type MyStruct struct {
 		Name    string `default:"John"`

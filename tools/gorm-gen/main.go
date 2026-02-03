@@ -80,7 +80,7 @@ func generate(dbName, createSQL, outPath string) {
 		return
 	}
 	// 将模型转换为模板需要的数据
-	data := map[string]interface{}{
+	data := map[string]any{
 		"TableName":    table.Name,
 		"TableComment": table.Comment,
 		"Fields":       table.Fields,
@@ -131,7 +131,7 @@ type Field struct {
 	Primary  bool
 	Unique   bool
 	Nullable bool
-	Default  interface{}
+	Default  any
 	Comment  string
 	Tag      string
 }
@@ -369,7 +369,7 @@ func getType(token string) string {
 	return token
 }
 
-func pareDefaultValue(ftype, fval string) (v interface{}) {
+func pareDefaultValue(ftype, fval string) (v any) {
 	if strings.ToLower(fval) == "null" {
 		return fval
 	}

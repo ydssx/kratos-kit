@@ -1,0 +1,336 @@
+---
+alwaysApply: true
+description: 中间件和工具包指南，解释可重用组件的使用方法
+globs: internal/middleware/*.go,pkg/**/*.go
+---
+
+# 中间件和工具包指南
+
+项目提供了丰富的中间件和工具包，用于处理横切关注点和通用功能。
+
+## 中间件层
+
+### 认证中间件
+
+```go
+// internal/middleware/auth.go
+package middleware
+
+import (
+    "context"
+    "kratos-kit/pkg/jwt"
+    "strings"
+
+    "github.com/go-kratos/kratos/v2/middleware"
+    "github.com/go-kratos/kratos/v2/transport"
+)
+
+// AuthMiddleware 认证中间件
+func AuthMiddleware(j jwt.JWT) middleware.Middleware {
+    return func(handler middleware.Handler) middleware.Handler {
+        return func(ctx context.Context, req interface{}) (interface{}, error) {
+            // 从请求头获取 token
+            if tr, ok := transport.FromServerContext(ctx); ok {
+                if header, ok := tr.RequestHeader().Get("Authorization"); ok {
+                    token := strings.TrimPrefix(header, "Bearer ")
+                    if token != "" {
+                        // 验证 token
+                        claims, err := j.ValidateToken(token)
+                        if err != nil {
+                            return nil, errors.Unauthorized("INVALID_TOKEN", "无效的token")
+                        }
+
+                        // 将用户信息放入上下文
+                        ctx = context.WithValue(ctx, "user_id", claims.UserID)
+                        ctx = context.WithValue(ctx, "user_role", claims.Role)
+                    }
+                }
+            }
+
+            return handler(ctx, req)
+        }
+    }
+}
+```
+
+### 限流中间件
+
+```go
+// internal/middleware/rate_limit.go
+package middleware
+
+import (
+    "context"
+    "kratos-kit/pkg/limit"
+
+    "github.com/go-kratos/kratos/v2/middleware"
+)
+
+// RateLimit 限流中间件
+func RateLimit(limiter *limit.Limiter) middleware.Middleware {
+    return func(handler middleware.Handler) middleware.Handler {
+        return func(ctx context.Context, req interface{}) (interface{}, error) {
+            // 检查是否允许请求
+            if !limiter.Allow() {
+                return nil, errors.TooManyRequests("RATE_LIMIT_EXCEEDED", "请求过于频繁")
+            }
+
+            return handler(ctx, req)
+        }
+    }
+}
+```
+
+### 日志中间件
+
+```go
+// internal/middleware/logging.go
+package middleware
+
+import (
+    "context"
+    "time"
+
+    "github.com/go-kratos/kratos/v2/log"
+    "github.com/go-kratos/kratos/v2/middleware"
+)
+
+// Logging 日志中间件
+func Logging(logger log.Logger) middleware.Middleware {
+    return func(handler middleware.Handler) middleware.Handler {
+        return func(ctx context.Context, req interface{}) (interface{}, error) {
+            start := time.Now()
+            reply, err := handler(ctx, req)
+            duration := time.Since(start)
+
+            // 记录请求日志
+            log.WithContext(ctx, logger).Infof(
+                "[HTTP] %s %s %v %s",
+                "GET", // 可通过上下文获取实际方法
+                "/path", // 可通过上下文获取实际路径
+                duration,
+                err,
+            )
+
+            return reply, err
+        }
+    }
+}
+```
+
+## 工具包使用指南
+
+### JWT 工具包
+
+```go
+// pkg/jwt/jwt.go
+package jwt
+
+import (
+    "time"
+    "kratos-kit/pkg/util"
+)
+
+// JWT JWT 操作接口
+type JWT interface {
+    GenerateToken(userID int64, role string, expireTime time.Duration) (string, error)
+    ValidateToken(token string) (*Claims, error)
+    RefreshToken(token string) (string, error)
+}
+
+// 使用示例
+jwt := jwt.NewJWT(&conf.JWT{
+    Secret: "your-secret-key",
+    Expire: 24 * time.Hour,
+})
+
+// 生成 token
+token, err := jwt.GenerateToken(123, "admin", 24*time.Hour)
+
+// 验证 token
+claims, err := jwt.ValidateToken(token)
+```
+
+### 缓存工具包
+
+```go
+// pkg/cache/cache.go
+package cache
+
+import (
+    "context"
+    "time"
+)
+
+// Cache 缓存接口
+type Cache interface {
+    Get(ctx context.Context, key string) (string, error)
+    Set(ctx context.Context, key string, value string, expiration time.Duration) error
+    Delete(ctx context.Context, key string) error
+    Exists(ctx context.Context, key string) bool
+}
+
+// 使用示例
+cache := cache.NewRedisCache(redisClient)
+
+// 设置缓存
+err := cache.Set(ctx, "user:123", userJSON, time.Hour)
+
+// 获取缓存
+data, err := cache.Get(ctx, "user:123")
+```
+
+### 加密工具包
+
+```go
+// pkg/util/encryption.go
+package util
+
+import (
+    "crypto/aes"
+    "crypto/cipher"
+    "crypto/rand"
+    "crypto/sha256"
+    "io"
+)
+
+// 密码加密
+func HashPassword(password string) (string, error) {
+    hash := sha256.Sum256([]byte(password))
+    return hex.EncodeToString(hash[:]), nil
+}
+
+// 密码验证
+func VerifyPassword(password, hash string) bool {
+    hashed := sha256.Sum256([]byte(password))
+    return hex.EncodeToString(hashed[:]) == hash
+}
+
+// AES 加密
+func EncryptAES(plaintext string, key []byte) (string, error) {
+    // 实现 AES 加密逻辑
+    return encrypted, nil
+}
+
+// AES 解密
+func DecryptAES(encrypted string, key []byte) (string, error) {
+    // 实现 AES 解密逻辑
+    return plaintext, nil
+}
+```
+
+### 并发工具包
+
+```go
+// pkg/concurrent/future.go
+package concurrent
+
+import (
+    "context"
+    "time"
+)
+
+// Future 异步执行结果
+func Future(ctx context.Context, fn func() (interface{}, error)) *FutureResult {
+    result := &FutureResult{
+        done: make(chan struct{}),
+    }
+
+    go func() {
+        defer close(result.done)
+        result.value, result.err = fn()
+    }()
+
+    return result
+}
+
+// 使用示例
+future := concurrent.Future(ctx, func() (interface{}, error) {
+    return expensiveOperation()
+})
+
+// 等待结果或超时
+select {
+case <-future.Done():
+    value, err := future.Result()
+    // 处理结果
+case <-time.After(5 * time.Second):
+    // 超时处理
+}
+```
+
+### 锁工具包
+
+```go
+// pkg/lock/lock.go
+package lock
+
+import (
+    "context"
+    "time"
+)
+
+// DistributedLock 分布式锁接口
+type DistributedLock interface {
+    Lock(ctx context.Context, key string, ttl time.Duration) (bool, error)
+    Unlock(ctx context.Context, key string) error
+    Refresh(ctx context.Context, key string, ttl time.Duration) error
+}
+
+// 使用分布式锁
+lock := lock.NewRedisLock(redisClient)
+
+success, err := lock.Lock(ctx, "resource:123", 30*time.Second)
+if !success {
+    return errors.Conflict("RESOURCE_LOCKED", "资源已被锁定")
+}
+defer lock.Unlock(ctx, "resource:123")
+
+// 执行临界区操作
+```
+
+### HTTP 客户端工具包
+
+```go
+// pkg/http/http.go
+package http
+
+import (
+    "bytes"
+    "context"
+    "encoding/json"
+    "io"
+    "net/http"
+    "time"
+)
+
+// HTTPClient 封装的 HTTP 客户端
+type HTTPClient interface {
+    Get(ctx context.Context, url string) ([]byte, error)
+    Post(ctx context.Context, url string, data interface{}) ([]byte, error)
+    Put(ctx context.Context, url string, data interface{}) ([]byte, error)
+    Delete(ctx context.Context, url string) ([]byte, error)
+}
+
+// 使用示例
+client := http.NewHTTPClient(&http.Config{
+    Timeout: 30 * time.Second,
+    RetryCount: 3,
+})
+
+// 发送 POST 请求
+var result map[string]interface{}
+err := client.Post(ctx, "https://api.example.com/users",
+    map[string]string{"name": "John", "email": "john@example.com"},
+    &result)
+```
+
+## 最佳实践
+
+1. **中间件组合**: 合理组合中间件，避免过度包装
+2. **错误处理**: 中间件应正确处理和传递错误
+3. **上下文管理**: 通过上下文传递用户信息和请求元数据
+4. **性能考虑**: 中间件应尽量减少延迟，避免阻塞操作
+5. **可配置性**: 中间件行为应可通过配置调整
+6. **可测试性**: 中间件应易于单元测试和集成测试
+7. **安全性**: 敏感操作使用加密和安全的通信方式

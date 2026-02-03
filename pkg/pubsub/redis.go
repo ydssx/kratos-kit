@@ -22,7 +22,7 @@ func NewRedisPubSub(cli *redis.Client) *RedisPubSub {
 
 // PublishMessage publishes a message to the given topic.
 // It returns an error if the publish failed.
-func (ps *RedisPubSub) PublishMessage(ctx context.Context, subject string, payload interface{}, opts ...Option) error {
+func (ps *RedisPubSub) PublishMessage(ctx context.Context, subject string, payload any, opts ...Option) error {
 	event, err := NewEvent(ctx, payload, opts...)
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (ps *RedisPubSub) SubscribeToTopic(ctx context.Context, topic string, handl
 func (ps *RedisPubSub) SubscribeToQueue(ctx context.Context, queue string, handler EventHandler) error {
 	// 创建一个同步池来重用 CloudEvent 实例
 	pool := &sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return new(CloudEvent)
 		},
 	}

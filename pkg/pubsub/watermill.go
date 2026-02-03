@@ -35,7 +35,7 @@ func NewWatermillPubSub(cli *redis.Client) *WatermillPubSub {
 	}
 }
 
-func (ps *WatermillPubSub) PublishMessage(ctx context.Context, subject string, payload interface{}, opts ...Option) error {
+func (ps *WatermillPubSub) PublishMessage(ctx context.Context, subject string, payload any, opts ...Option) error {
 	event, err := NewEvent(ctx, payload, opts...)
 	if err != nil {
 		return err

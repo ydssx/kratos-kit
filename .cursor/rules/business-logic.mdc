@@ -1,0 +1,180 @@
+---
+alwaysApply: true
+description: 业务逻辑层指南，解释领域层的设计和实现模式
+globs: internal/biz/*.go
+---
+
+# 业务逻辑层指南
+
+业务逻辑层（biz）是 Kratos 架构的核心，实现领域驱动设计（DDD）的领域层。
+
+## 文件组织结构
+
+```
+internal/biz/
+├── biz.go              # 业务接口定义和依赖注入
+├── [domain].go         # 领域实体和业务逻辑
+├── common.go           # 通用业务类型和接口
+├── types.go            # 领域类型定义
+└── upload.go           # 文件上传业务逻辑
+```
+
+## 核心概念
+
+### 领域实体（Entity）
+```go
+// internal/biz/user.go
+package biz
+
+import "context"
+
+// User 是用户领域实体
+type User struct {
+    ID        int64
+    Username  string
+    Email     string
+    Password  string
+    CreatedAt time.Time
+    UpdatedAt time.Time
+}
+
+// UserRepo 定义用户仓储接口
+type UserRepo interface {
+    Create(ctx context.Context, user *User) (*User, error)
+    GetByID(ctx context.Context, id int64) (*User, error)
+    GetByEmail(ctx context.Context, email string) (*User, error)
+    Update(ctx context.Context, user *User) (*User, error)
+    Delete(ctx context.Context, id int64) error
+    List(ctx context.Context, page, size int) ([]*User, error)
+}
+
+// UserUsecase 实现用户业务用例
+type UserUsecase struct {
+    repo UserRepo
+    log  *log.Helper
+}
+
+// NewUserUsecase 创建用户业务用例实例
+func NewUserUsecase(repo UserRepo, logger log.Logger) *UserUsecase {
+    return &UserUsecase{
+        repo: repo,
+        log:  log.NewHelper(logger),
+    }
+}
+
+// Create 创建用户业务逻辑
+func (uc *UserUsecase) Create(ctx context.Context, req *CreateUserRequest) (*User, error) {
+    // 业务规则验证
+    if req.Username == "" {
+        return nil, errors.BadRequest("USERNAME_IS_REQUIRED", "用户名不能为空")
+    }
+
+    // 检查用户名是否已存在
+    existing, err := uc.repo.GetByEmail(ctx, req.Email)
+    if err != nil {
+        uc.log.Errorf("查询用户失败: %v", err)
+        return nil, err
+    }
+    if existing != nil {
+        return nil, errors.Conflict("USER_ALREADY_EXISTS", "用户已存在")
+    }
+
+    // 创建用户实体
+    user := &User{
+        Username:  req.Username,
+        Email:     req.Email,
+        Password:  req.Password, // 注意：实际应该加密
+        CreatedAt: time.Now(),
+        UpdatedAt: time.Now(),
+    }
+
+    // 保存到仓储
+    created, err := uc.repo.Create(ctx, user)
+    if err != nil {
+        uc.log.Errorf("创建用户失败: %v", err)
+        return nil, err
+    }
+
+    return created, nil
+}
+```
+
+## 领域服务（Domain Service）
+
+当某些业务逻辑不属于任何实体时，应创建领域服务：
+
+```go
+// NotificationService 通知领域服务
+type NotificationService interface {
+    SendWelcomeEmail(ctx context.Context, user *User) error
+    SendPasswordResetEmail(ctx context.Context, email string) error
+}
+
+type notificationService struct {
+    emailRepo EmailRepo
+    tmplRepo  TemplateRepo
+}
+
+func (s *notificationService) SendWelcomeEmail(ctx context.Context, user *User) error {
+    // 发送欢迎邮件的复杂业务逻辑
+    return nil
+}
+```
+
+## 值对象（Value Object）
+
+用于描述事物的属性，不可变的领域对象：
+
+```go
+// Email 值对象
+type Email struct {
+    address string
+}
+
+func NewEmail(address string) (*Email, error) {
+    if !isValidEmail(address) {
+        return nil, errors.BadRequest("INVALID_EMAIL", "无效的邮箱格式")
+    }
+    return &Email{address: address}, nil
+}
+
+func (e *Email) String() string {
+    return e.address
+}
+
+func (e *Email) IsEmpty() bool {
+    return e.address == ""
+}
+```
+
+## 业务接口定义
+
+```go
+// internal/biz/biz.go
+package biz
+
+import "github.com/google/wire"
+
+// ProviderSet 依赖注入配置
+var ProviderSet = wire.NewSet(
+    NewUserUsecase,
+    NewAdminUsecase,
+    // 其他用例...
+)
+
+// 业务接口定义示例
+type Transaction interface {
+    Execute(ctx context.Context, fn func(ctx context.Context) error) error
+    ExecuteInTx(ctx context.Context, fns ...func(ctx context.Context) error) error
+}
+```
+
+## 最佳实践
+
+1. **实体设计**: 实体应包含业务逻辑方法，而不仅仅是数据载体
+2. **仓储接口**: 定义清晰的仓储接口，便于测试和替换实现
+3. **错误处理**: 使用标准错误类型，提供清晰的错误信息
+4. **依赖注入**: 通过接口依赖，避免具体实现耦合
+5. **业务验证**: 在领域层进行业务规则验证，而不仅仅是数据验证
+6. **日志记录**: 记录重要的业务操作，便于审计和调试
+7. **事务管理**: 复杂业务操作应支持事务回滚

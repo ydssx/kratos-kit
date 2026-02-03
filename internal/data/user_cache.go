@@ -50,7 +50,7 @@ func (u *UserRepoCacheDecorator) GetUserByID(ctx context.Context, id uint) (data
 }
 
 // UpdateUser 更新用户数据,并删除与该用户相关的缓存
-func (u *UserRepoCacheDecorator) UpdateUser(ctx context.Context, userId int, user interface{}) error {
+func (u *UserRepoCacheDecorator) UpdateUser(ctx context.Context, userId int, user any) error {
 	if err := u.userRepo.UpdateUser(ctx, userId, user); err != nil {
 		return err
 	}

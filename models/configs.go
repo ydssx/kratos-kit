@@ -56,7 +56,7 @@ func (m *sysConfigModel) Create(sysConfig SysConfig) error {
 	return m.db.Create(&sysConfig).Error
 }
 
-func (m *sysConfigModel) Updates(values interface{}) error {
+func (m *sysConfigModel) Updates(values any) error {
 	return m.db.Updates(values).Error
 }
 
@@ -70,7 +70,7 @@ func (m *sysConfigModel) LastOne() (data *SysConfig, err error) {
 	return
 }
 
-func (m *sysConfigModel) DeleteByPrimKey(key interface{}) error {
+func (m *sysConfigModel) DeleteByPrimKey(key any) error {
 	return m.db.Where(" IN (?)", key).Delete(&SysConfig{}).Error
 }
 
